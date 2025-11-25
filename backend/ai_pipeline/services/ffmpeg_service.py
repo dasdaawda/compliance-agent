@@ -3,6 +3,7 @@ import subprocess
 import tempfile
 import logging
 from urllib.parse import urlparse
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -62,20 +63,21 @@ class AudioProcessor:
 
 
 class FrameProcessor:
-    def extract_frames(self, video_path, fps=1):
+    def extract_frames(self, video_path, fps=None):
         # Проверяем существование файла
         if not os.path.exists(video_path):
             logger.error(f"Video file does not exist: {video_path}")
             raise FileNotFoundError(f"Video file does not exist: {video_path}")
         
+        target_fps = fps or settings.FRAME_EXTRACTION_FPS
         output_dir = tempfile.mkdtemp(prefix="frames_")
         cmd = [
-            'ffmpeg', '-i', video_path, '-vf', f'fps={fps}',
+            'ffmpeg', '-i', video_path, '-vf', f'fps={target_fps}',
             '-qscale:v', '2', os.path.join(output_dir, 'frame_%04d.jpg')
         ]
         try:
             subprocess.run(cmd, capture_output=True, check=True)
-            logger.info(f"Frames extracted successfully to directory: {output_dir}")
+            logger.info(f"Frames extracted successfully to directory: {output_dir} at {target_fps} fps")
             return output_dir
         except subprocess.CalledProcessError as e:
             logger.error(f"Error extracting frames from video {video_path}: {e.stderr.decode()}")

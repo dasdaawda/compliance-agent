@@ -15,6 +15,11 @@ logger = logging.getLogger(__name__)
 
 try:
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'compliance_app.settings')
+    
+    # Валидация конфигурации перед запуском
+    from compliance_app.config_validator import validate_config
+    validate_config()
+    
     application = get_wsgi_application()
     logger.info("WSGI application initialized successfully.")
 except Exception as e:
