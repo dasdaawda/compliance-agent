@@ -164,16 +164,61 @@ BACKBLAZE_CONFIG = {
     'CLOUDFLARE_CDN_URL': env('CLOUDFLARE_CDN_URL', default=''),
 }
 
-# Replicate
-REPLICATE_API_TOKEN = env('REPLICATE_API_TOKEN', default='your_api_token')  # Вынесено в переменные окружения
-WHISPER_MODEL_ID = env('WHISPER_MODEL_ID', default="openai/whisper:4d50797290df275329f202e48c76360b3f22b08d28c196cbc54600319435f8d2")
-YOLO_MODEL_ID = env('YOLO_MODEL_ID', default="nightmareai/yolo-v8:6b4c0dd7f9c6a5b7ffadf8c2d0a2f0c7c9d78e8b8c8e6a5a5a5a5a5a5")
-NSFW_MODEL_ID = env('NSFW_MODEL_ID', default="falconsai/nsfw_image_detection:8a4f8c5c9c51e7e26e39e73b3c3d79b4e5e5a5a5a5a5a5a5a5a5a5a5a5a5")
+# Replicate AI Services
+REPLICATE_API_TOKEN = env('REPLICATE_API_TOKEN', default='')
+if not REPLICATE_API_TOKEN and not DEBUG:
+    raise ValueError("REPLICATE_API_TOKEN must be set in production")
+
+# AI Model IDs (Replicate)
+WHISPER_MODEL_ID = env(
+    'WHISPER_MODEL_ID', 
+    default="openai/whisper:4d50797290df275329f202e48c76360b3f22b08d28c196cbc54600319435f8d2"
+)
+YOLO_MODEL_ID = env(
+    'YOLO_MODEL_ID', 
+    default="adirik/yolov8:fcb0173c3d6ef4e4e73ced22d0c6c3c7d0e5d3e5b5e5e5e5e5e5e5e5e5e5e5"
+)
+NSFW_MODEL_ID = env(
+    'NSFW_MODEL_ID', 
+    default="lucataco/nsfw-image-detection:02f0b7ae9c4c3d7e4e7d5f0e5c5d5e5f5e5e5e5e5e5e5e5e5e5e5e5e5e"
+)
+VIOLENCE_MODEL_ID = env(
+    'VIOLENCE_MODEL_ID',
+    default="lucataco/vit-violence-detection:01f0b7ae9c4c3d7e4e7d5f0e5c5d5e5f5e5e5e5e5e5e5e5e5e5e5e5e5e"
+)
+OCR_MODEL_ID = env(
+    'OCR_MODEL_ID',
+    default="abiruyt/text-extract-ocr:3e6e3e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e"
+)
+
+# Replicate настройки
+REPLICATE_TIMEOUT = env.int('REPLICATE_TIMEOUT', default=300)
 
 # Email
 EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = env('EMAIL_HOST', default='localhost')
+EMAIL_PORT = env.int('EMAIL_PORT', default=587)
+EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
+EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='noreply@localhost')
+ADMIN_EMAIL = env('ADMIN_EMAIL', default='admin@localhost')
 
-TEMP_DIR = env('TEMP_DIR', default='/tmp')  # Вынесено в переменные окружения
+# Cloudflare (дополнительные настройки)
+CLOUDFLARE_API_TOKEN = env('CLOUDFLARE_API_TOKEN', default='')
+CLOUDFLARE_ZONE_ID = env('CLOUDFLARE_ZONE_ID', default='')
+
+# AI Pipeline
+MAX_VIDEO_FILE_SIZE = env.int('MAX_VIDEO_FILE_SIZE', default=2147483648)  # 2GB
+MAX_VIDEO_DURATION = env.int('MAX_VIDEO_DURATION', default=7200)  # 2 hours
+FRAME_EXTRACTION_FPS = env.int('FRAME_EXTRACTION_FPS', default=1)
+
+# Словари для NLP (опционально)
+PROFANITY_DICT_PATH = env('PROFANITY_DICT_PATH', default='')
+BRAND_DICT_PATH = env('BRAND_DICT_PATH', default='')
+STOPWORDS_DICT_PATH = env('STOPWORDS_DICT_PATH', default='')
+
+TEMP_DIR = env('TEMP_DIR', default='/tmp')
 
 # Logging
 LOGGING = {

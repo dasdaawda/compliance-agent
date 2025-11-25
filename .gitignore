@@ -3,15 +3,57 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-*.env
 *.sqlite3
+*.db
+
+# Environment variables
+.env
+.env.local
+.env.*.local
 
 # Virtual environments
 venv/
 .venv/
+env/
+ENV/
+
+# Django
+staticfiles/
+media/
+*.log
+db.sqlite3
+
+# Temporary files
+tmp/
+temp/
+*.tmp
 
 # VS Code
 .vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
 
 # System files
 .DS_Store
+Thumbs.db
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# Test artifacts
+.pytest_cache/
+.tox/
+
+# Backup files
+*.bak
+*~
