@@ -27,5 +27,5 @@ class CustomUserAdmin(UserAdmin):
     # usability improvements
     list_display_links = ('email',)
     readonly_fields = ('date_joined', 'last_login')
-    autocomplete_fields = ('groups', 'user_permissions')
+    # autocomplete_fields = ('groups', 'user_permissions')  # Закомментировано чтобы избежать ошибки
     list_per_page = 25

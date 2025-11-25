@@ -55,7 +55,7 @@ class ClientManagementView(LoginRequiredMixin, AdminRequiredMixin, TemplateView)
         context = super().get_context_data(**kwargs)
         
         # Оптимизация запросов с использованием select_related и annotate
-        clients = User.objects.filter(role=User.Role.CLIENT).annotate(
+        clients = User.objects.filter(role=UserRole.CLIENT).annotate(
             project_count=Count('projects'),
             video_count=Count('projects__videos')
         ).order_by('-date_joined')

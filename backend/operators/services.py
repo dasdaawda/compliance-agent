@@ -5,7 +5,8 @@ from django.utils import timezone
 from django.db import transaction
 from django.core.exceptions import FieldDoesNotExist
 
-from .models import OperatorLabel, VerificationTask
+from .models import OperatorLabel
+from ai_pipeline.models import VerificationTask
 
 logger = logging.getLogger(__name__)
 

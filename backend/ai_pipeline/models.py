@@ -96,7 +96,7 @@ class VerificationTask(models.Model):
     class Meta:
         verbose_name = _('задача на верификацию')
         verbose_name_plural = _('задачи на верификацию')
-        ordering = ['-created_at']
+        ordering = ['-id']
 
     def __str__(self):
         video_name = self.video.original_name if self.video else "Unknown Video"
