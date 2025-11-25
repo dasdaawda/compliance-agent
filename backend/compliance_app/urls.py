@@ -29,7 +29,7 @@ urlpatterns = [
     path('users/', include('users.urls')),
     path('projects/', include('projects.urls')),
     path('operators/', include('operators.urls')),  # Исправлено имя приложения
-    path('custom-admin/', include('admin.urls')),  # Переименован маршрут для кастомного приложения
+    # path('custom-admin/', include('admin.urls')),  # Временно закомментировано
     
     # Перенаправление корневого URL
     path('', RedirectView.as_view(pattern_name='projects:project_list')),

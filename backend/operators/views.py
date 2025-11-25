@@ -11,8 +11,8 @@ from django.utils.decorators import method_decorator
 
 from users.views import OperatorRequiredMixin
 from projects.models import Video, VideoStatus
-from ai_pipeline.models import AITrigger
-from .models import OperatorLabel, VerificationTask
+from ai_pipeline.models import AITrigger, VerificationTask
+from .models import OperatorLabel
 from .services import LabelingService, TaskQueueService
 
 class OperatorDashboardView(LoginRequiredMixin, OperatorRequiredMixin, TemplateView):
