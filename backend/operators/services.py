@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.db import transaction
 from django.core.exceptions import FieldDoesNotExist
 
-from .models import OperatorLabel
+from .models import OperatorLabel, OperatorActionLog
 from ai_pipeline.models import VerificationTask
 
 logger = logging.getLogger(__name__)
@@ -78,7 +78,7 @@ class LabelingService:
     def create_operator_label(cls, video, operator, ai_trigger=None, final_label=None,
                               comment: str = "", start_time_sec=None, end_time_sec=None):
         """
-        Создаёт OperatorLabel.
+        Создаёт OperatorLabel с логированием действия.
         - ai_trigger может быть None (ручное добавление) -> в этом случае требуется start_time_sec.
         - если ai_trigger передан и start_time_sec не указан, берём ai_trigger.timestamp_sec.
         - final_label может быть Enum member (FinalLabel) или строкой (значение choice).
@@ -146,6 +146,25 @@ class LabelingService:
                 # если нет VideoStatus или не получилось — пропускаем
                 pass
 
+            # Логируем действие оператора
+            try:
+                task = video.verification_task if hasattr(video, 'verification_task') else None
+                OperatorActionLog.objects.create(
+                    operator=operator,
+                    task=task,
+                    trigger=ai_trigger,
+                    action_type=OperatorActionLog.ActionType.PROCESSED_TRIGGER,
+                    details={
+                        'final_label': final_label_value,
+                        'comment': comment,
+                        'start_time_sec': float(start_time_sec),
+                        'ai_trigger_id': str(ai_trigger.id) if ai_trigger else None,
+                        'ai_trigger_source': getattr(ai_trigger, 'trigger_source', None) if ai_trigger else None,
+                    }
+                )
+            except Exception as log_exc:
+                logger.exception("Failed to log operator action: %s", log_exc)
+
             return operator_label
 
 
@@ -163,18 +182,78 @@ class TaskQueueService:
 
     @classmethod
     def get_next_task(cls, operator):
-        qs = VerificationTask.objects.filter(status=VerificationTask.Status.PENDING)
-        try:
-            task = qs.order_by('created_at', 'id').first()
-        except Exception:
-            task = qs.order_by('id').first()
+        """
+        Получить следующую задачу с правильной блокировкой и FIFO порядком.
+        Использует select_for_update(skip_locked=True) для предотвращения race conditions.
+        """
+        with transaction.atomic():
+            # Блокируем следующую задачу в порядке FIFO
+            task = (
+                VerificationTask.objects
+                .select_for_update(skip_locked=True)
+                .filter(status=VerificationTask.Status.PENDING)
+                .order_by('created_at', 'id')
+                .first()
+            )
 
-        if task:
-            # assign_to_operator может выбросить исключение — оборачиваем и логируем
-            try:
-                task.assign_to_operator(operator)
-                return task
-            except Exception as exc:
-                logger.exception("Failed to assign task %s to operator %s: %s", getattr(task, 'id', None), getattr(operator, 'id', None), exc)
-                return None
+            if task:
+                try:
+                    # Назначаем задачу оператору
+                    task.assign_to_operator(operator)
+                    
+                    # Логируем назначение
+                    OperatorActionLog.objects.create(
+                        operator=operator,
+                        task=task,
+                        action_type=OperatorActionLog.ActionType.ASSIGNED_TASK,
+                        details={
+                            'task_id': str(task.id),
+                            'video_id': str(task.video.id),
+                            'video_name': task.video.original_name,
+                            'expires_at': task.expires_at.isoformat() if task.expires_at else None,
+                        }
+                    )
+                    
+                    logger.info("Task %s assigned to operator %s", task.id, operator.id)
+                    return task
+                    
+                except Exception as exc:
+                    logger.exception("Failed to assign task %s to operator %s: %s", task.id, operator.id, exc)
+                    return None
+        
         return None
+    
+    @classmethod
+    def resume_task(cls, operator, task):
+        """
+        Возобновить работу над задачей (если она была назначена ранее этому же оператору)
+        """
+        with transaction.atomic():
+            # Блокируем задачу для проверки
+            current_task = (
+                VerificationTask.objects
+                .select_for_update()
+                .get(id=task.id)
+            )
+            
+            if current_task.operator != operator:
+                raise ValueError("Task is not assigned to this operator")
+            
+            if current_task.status != VerificationTask.Status.IN_PROGRESS:
+                raise ValueError("Task is not in progress")
+            
+            # Обновляем heartbeat и продлеваем блокировку
+            current_task.heartbeat()
+            
+            # Логируем возобновление
+            OperatorActionLog.objects.create(
+                operator=operator,
+                task=current_task,
+                action_type=OperatorActionLog.ActionType.RESUMED_TASK,
+                details={
+                    'task_id': str(current_task.id),
+                    'new_expires_at': current_task.expires_at.isoformat() if current_task.expires_at else None,
+                }
+            )
+            
+            return current_task

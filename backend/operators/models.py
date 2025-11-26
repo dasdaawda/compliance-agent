@@ -7,6 +7,57 @@ from ai_pipeline.models import AITrigger
 from users.models import UserRole
 
 
+class OperatorActionLog(models.Model):
+    """Лог действий операторов для аудита"""
+    class ActionType(models.TextChoices):
+        ASSIGNED_TASK = 'assigned_task', _('Назначен задачу')
+        HEARTBEAT = 'heartbeat', _('Обновил активность')
+        COMPLETED_TASK = 'completed_task', _('Завершил задачу')
+        RELEASED_TASK = 'released_task', _('Освободил задачу')
+        PROCESSED_TRIGGER = 'processed_trigger', _('Обработал триггер')
+        RESUMED_TASK = 'resumed_task', _('Возобновил задачу')
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    operator = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='action_logs',
+        verbose_name=_('оператор')
+    )
+    task = models.ForeignKey(
+        'ai_pipeline.VerificationTask',
+        on_delete=models.CASCADE,
+        related_name='action_logs',
+        null=True,
+        blank=True,
+        verbose_name=_('задача')
+    )
+    trigger = models.ForeignKey(
+        AITrigger,
+        on_delete=models.CASCADE,
+        related_name='action_logs',
+        null=True,
+        blank=True,
+        verbose_name=_('триггер')
+    )
+    action_type = models.CharField(_('тип действия'), max_length=20, choices=ActionType.choices)
+    details = models.JSONField(_('детали'), default=dict, blank=True)
+    timestamp = models.DateTimeField(_('время действия'), auto_now_add=True)
+    
+    class Meta:
+        verbose_name = _('лог действия оператора')
+        verbose_name_plural = _('логи действий операторов')
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['operator', '-timestamp']),
+            models.Index(fields=['task', '-timestamp']),
+            models.Index(fields=['action_type', '-timestamp']),
+        ]
+    
+    def __str__(self):
+        return f"{self.operator.username} - {self.get_action_type_display()} - {self.timestamp}"
+
+
 class OperatorLabel(models.Model):
     class FinalLabel(models.TextChoices):
         OK = "ok", _("OK")

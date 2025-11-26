@@ -1,0 +1,9 @@
+<button class="btn btn-success" 
+        hx-post="{% url 'operators:take_task' %}"
+        hx-target="#main-content"
+        hx-indicator="#take-task-spinner">
+    <span class="htmx-indicator" id="take-task-spinner">
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+    </span>
+    Взять задачу
+</button>
