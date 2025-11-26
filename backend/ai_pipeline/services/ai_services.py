@@ -297,6 +297,89 @@ class ReportCompiler:
         
         return report
     
+    def compile_final_report_from_db(self, video):
+        """
+        Builds final report from database, filtering only PENDING AITriggers.
+        Includes RiskDefinition metadata.
+        """
+        from ..models import AITrigger, RiskDefinition
+        
+        # Get all pending triggers for this video
+        db_triggers = AITrigger.objects.filter(
+            video=video,
+            status=AITrigger.Status.PENDING
+        ).order_by('timestamp_sec')
+        
+        report = {
+            'video_id': str(video.id),
+            'total_triggers': db_triggers.count(),
+            'triggers_by_type': {},
+            'triggers_by_source': {},
+            'risks': []
+        }
+        
+        for db_trigger in db_triggers:
+            trigger_type = db_trigger.get_trigger_source_display()
+            source = db_trigger.trigger_source
+            
+            # Track by type
+            if trigger_type not in report['triggers_by_type']:
+                report['triggers_by_type'][trigger_type] = 0
+            report['triggers_by_type'][trigger_type] += 1
+            
+            # Track by source
+            if source not in report['triggers_by_source']:
+                report['triggers_by_source'][source] = 0
+            report['triggers_by_source'][source] += 1
+            
+            # Get risk definition metadata
+            risk_def = None
+            try:
+                risk_def = RiskDefinition.objects.get(trigger_source=source)
+            except RiskDefinition.DoesNotExist:
+                pass
+            
+            # Build risk entry
+            risk_entry = {
+                'id': str(db_trigger.id),
+                'timestamp': float(db_trigger.timestamp_sec),
+                'type': trigger_type,
+                'source': source,
+                'confidence': float(db_trigger.confidence),
+                'description': self._get_risk_description_from_trigger(db_trigger),
+                'data': db_trigger.data,
+            }
+            
+            # Add risk definition metadata if available
+            if risk_def:
+                risk_entry['risk_level'] = risk_def.risk_level
+                risk_entry['risk_name'] = risk_def.name
+            
+            report['risks'].append(risk_entry)
+        
+        logger.info(f"Built report from DB for video {video.id}: {report['total_triggers']} triggers")
+        return report
+    
+    def _get_risk_description_from_trigger(self, db_trigger):
+        """Gets description from a database trigger object."""
+        source = db_trigger.trigger_source
+        data = db_trigger.data or {}
+        
+        if source == 'whisper_profanity':
+            return f"Обнаружена нецензурная лексика: '{data.get('matched_word', '')}'"
+        elif source == 'whisper_brand':
+            return f"Упоминание бренда: '{data.get('matched_brand', '')}'"
+        elif source == 'falconsai_nsfw':
+            return f"NSFW контент (уверенность: {db_trigger.confidence:.2f})"
+        elif source == 'violence_detector':
+            return f"Обнаружено насилие (уверенность: {db_trigger.confidence:.2f})"
+        elif source == 'yolo_object':
+            return f"Обнаружен объект: {data.get('class', 'unknown')}"
+        elif source == 'easyocr_text':
+            return f"Обнаруженный текст: {data.get('text', '')[:50]}"
+        else:
+            return f"Риск типа: {source}"
+    
     def _get_risk_description(self, trigger):
         source = trigger['source']
         data = trigger['data']

@@ -20,8 +20,9 @@ try:
         
         task_routes={
             'ai_pipeline.tasks.*': {'queue': 'ai_pipeline'},
+            'ai_pipeline.celery_tasks.*': {'queue': 'ai_pipeline'},
             'projects.tasks.*': {'queue': 'projects'},
-            'operators.tasks.*': {'queue': 'operators'},  # Исправлено имя очереди
+            'operators.tasks.*': {'queue': 'operators'},
         },
         
         worker_prefetch_multiplier=1,
