@@ -70,6 +70,34 @@ class PipelineExecution(models.Model):
         return f"Pipeline for {video_name}"
 
 
+class RiskDefinition(models.Model):
+    """Определение риска/триггера для справочной информации."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    trigger_source = models.CharField(_('источник триггера'), max_length=50, choices=AITrigger.TriggerSource.choices, unique=True)
+    name = models.CharField(_('название риска'), max_length=255)
+    description = models.TextField(_('описание'))
+    risk_level = models.CharField(
+        _('уровень риска'),
+        max_length=20,
+        choices=[
+            ('low', _('Низкий')),
+            ('medium', _('Средний')),
+            ('high', _('Высокий')),
+        ],
+        default='medium'
+    )
+    created_at = models.DateTimeField(_('дата создания'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('дата обновления'), auto_now=True)
+
+    class Meta:
+        verbose_name = _('определение риска')
+        verbose_name_plural = _('определения рисков')
+        ordering = ['trigger_source']
+
+    def __str__(self):
+        return f"{self.name} ({self.get_trigger_source_display()})"
+
+
 class VerificationTask(models.Model):
     class Status(models.TextChoices):
         PENDING = 'pending', _('В ожидании')

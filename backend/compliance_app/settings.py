@@ -164,6 +164,11 @@ BACKBLAZE_CONFIG = {
     'CLOUDFLARE_CDN_URL': env('CLOUDFLARE_CDN_URL', default=''),
 }
 
+# B2 Retry settings
+B2_MAX_RETRIES = env.int('B2_MAX_RETRIES', default=3)
+B2_RETRY_BACKOFF = env.int('B2_RETRY_BACKOFF', default=2)
+B2_RETRY_BACKOFF_MAX = env.int('B2_RETRY_BACKOFF_MAX', default=60)
+
 # Replicate AI Services
 REPLICATE_API_TOKEN = env('REPLICATE_API_TOKEN', default='')
 if not REPLICATE_API_TOKEN and not DEBUG:
@@ -212,6 +217,8 @@ CLOUDFLARE_ZONE_ID = env('CLOUDFLARE_ZONE_ID', default='')
 MAX_VIDEO_FILE_SIZE = env.int('MAX_VIDEO_FILE_SIZE', default=2147483648)  # 2GB
 MAX_VIDEO_DURATION = env.int('MAX_VIDEO_DURATION', default=7200)  # 2 hours
 FRAME_EXTRACTION_FPS = env.int('FRAME_EXTRACTION_FPS', default=1)
+ALLOWED_VIDEO_FORMATS = env.list('ALLOWED_VIDEO_FORMATS', default=['mp4', 'avi', 'mov', 'mkv', 'webm'])
+DASHBOARD_URL = env('DASHBOARD_URL', default='https://app.example.com')
 
 # Словари для NLP (опционально)
 PROFANITY_DICT_PATH = env('PROFANITY_DICT_PATH', default='')

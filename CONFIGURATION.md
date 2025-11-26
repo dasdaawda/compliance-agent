@@ -318,6 +318,125 @@ REDIS_URL=rediss://default:password@host:25061
 
 ---
 
+## Pipeline Resilience и Storage Settings
+
+### Retry Configuration
+
+Параметры автоматического повтора для задач хранилища B2:
+
+```env
+# B2 retry settings
+B2_MAX_RETRIES=3                    # Максимум попыток (по умолчанию: 3)
+B2_RETRY_BACKOFF=2                  # Множитель экспоненциального backoff (по умолчанию: 2)
+B2_RETRY_BACKOFF_MAX=60             # Максимальное время ожидания между попытками (секунды, по умолчанию: 60)
+```
+
+### Validation Settings
+
+Параметры валидации видео перед обработкой:
+
+```env
+# Ограничения размера и длительности
+MAX_VIDEO_FILE_SIZE=2147483648      # Максимальный размер файла (байты, по умолчанию: 2GB)
+MAX_VIDEO_DURATION=7200             # Максимальная длительность (секунды, по умолчанию: 2 часа)
+ALLOWED_VIDEO_FORMATS=mp4,avi,mov,mkv,webm  # Допустимые форматы (по умолчанию: mp4, avi, mov, mkv, webm)
+```
+
+### Artifact Retention Policies
+
+Автоматическое удаление старых артефактов:
+
+- **Завершенные пайплайны** удаляются из B2 через **7 дней** после завершения
+- **Неудачные пайплайны** удаляются через **14 дней** (для анализа ошибок)
+- **Временные файлы** (кадры, аудио) удаляются через **24 часа** после завершения отчета
+- **Кэшированные URL** истекают через **1 час** (переиспользование не рекомендуется)
+
+Периодические задачи:
+- `cleanup_artifacts_periodic`: Очистка артефактов (запускается ежедневно в 2:00 UTC)
+- `refresh_cdn_cache_periodic`: Обновление CDN кэша (запускается каждый час)
+
+---
+
+## Pipeline Error Handling
+
+### Fail-Fast Validation
+
+Видео валидируется перед запуском пайплайна:
+- Проверка размера файла
+- Проверка длительности
+- Проверка формата файла
+- Проверка наличия файла
+
+Если валидация не пройдена, отправляется уведомление на email и видео помечается как `FAILED`.
+
+### Structured Logging
+
+Все этапы пайплайна логируются в JSON формате для удобства отладки:
+
+```json
+{
+  "timestamp": "2024-01-01T12:00:00.000000",
+  "video_id": "uuid-here",
+  "step": "preprocess_video",
+  "status": "completed",
+  "error": null
+}
+```
+
+### Notifications
+
+#### Success Notifications
+
+Когда отчет готов к верификации, отправляется HTML письмо:
+- **Получатели:** Владелец проекта
+- **Шаблон:** `emails/video_ready.html`
+- **Тема:** ✅ Отчет по видео готов
+
+#### Failure Notifications
+
+При сбое пайплайна отправляется уведомление:
+- **Получатели:** Владелец проекта + администратор
+- **Информация:** Этап сбоя, сообщение об ошибке, ID видео
+- **Тема:** ❌ Ошибка обработки видео
+
+---
+
+## Storage с B2 Retries
+
+### B2Utils Wrapper
+
+Все операции с Backblaze B2 используют обертку `B2Utils`:
+
+```python
+from storage.b2_utils import get_b2_utils
+
+b2_utils = get_b2_utils()
+
+# Upload video
+url = b2_utils.upload_video('/local/path/video.mp4', 'videos/id.mp4')
+
+# Generate signed URL (с кэшированием)
+signed_url = b2_utils.generate_signed_url('videos/id.mp4')
+
+# Delete artifact
+b2_utils.delete_artifact('videos/id.mp4')
+```
+
+### Retry Logic
+
+- **Автоматические повторы** на ClientError и OSError
+- **Экспоненциальный backoff**: 1s, 2s, 4s, ..., до 60s
+- **Максимум попыток:** 3 (настраивается)
+- **Логирование:** Каждая попытка логируется
+
+### Signed URL Caching
+
+- Кэшированные URL хранятся в Redis
+- TTL: 1 час
+- Автоматическое очищение при удалении артефакта
+
+---
+
 ## Дополнительная документация
 
 - **Деплой:** См. [DEPLOYMENT.md](DEPLOYMENT.md)

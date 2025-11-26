@@ -16,3 +16,4 @@ psycopg2-binary
 django-htmx
 django-celery-email
 python-dotenv
+tenacity
