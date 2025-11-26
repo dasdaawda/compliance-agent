@@ -6,8 +6,15 @@ class ProjectForm(forms.ModelForm):
         model = Project
         fields = ['name', 'description']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control'}),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Название проекта'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Описание проекта (необязательно)'
+            }),
         }
 
 class VideoUploadForm(forms.ModelForm):
@@ -15,8 +22,14 @@ class VideoUploadForm(forms.ModelForm):
         model = Video
         fields = ['original_name', 'video_file']
         widgets = {
-            'original_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'video_file': forms.FileInput(attrs={'class': 'form-control'}),
+            'original_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Название видео'
+            }),
+            'video_file': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': 'video/*'
+            }),
         }
 
 class VideoURLForm(forms.ModelForm):
