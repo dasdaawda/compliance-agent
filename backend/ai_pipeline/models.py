@@ -24,6 +24,21 @@ class AITrigger(models.Model):
     confidence = models.DecimalField(_('уверенность'), max_digits=5, decimal_places=2, default=Decimal('0.0'))
     data = models.JSONField(_('данные'))
     
+    risk_code = models.ForeignKey(
+        'RiskDefinition',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='triggers',
+        verbose_name=_('код риска')
+    )
+    raw_payload = models.JSONField(
+        _('сырые данные'),
+        null=True,
+        blank=True,
+        help_text=_('Полный ответ API для аудита')
+    )
+    
     class Status(models.TextChoices):
         PENDING = 'pending', _('Ожидает проверки')
         PROCESSED = 'processed', _('Обработан оператором')
@@ -35,6 +50,10 @@ class AITrigger(models.Model):
         verbose_name = _('AI триггер')
         verbose_name_plural = _('AI триггеры')
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['video', 'status']),
+            models.Index(fields=['status']),
+        ]
 
     def __str__(self):
         video_name = self.video.original_name if self.video else "Unknown Video"
@@ -55,6 +74,10 @@ class PipelineExecution(models.Model):
     progress = models.IntegerField(_('прогресс'), default=0)
     error_message = models.TextField(_('сообщение об ошибке'), blank=True)
     
+    last_step = models.CharField(_('последний выполненный шаг'), max_length=100, blank=True)
+    retry_count = models.IntegerField(_('количество повторов'), default=0)
+    error_trace = models.JSONField(_('трасса ошибок'), default=list, blank=True)
+    
     started_at = models.DateTimeField(_('время начала'), null=True, blank=True)
     completed_at = models.DateTimeField(_('время завершения'), null=True, blank=True)
     processing_time_seconds = models.IntegerField(_('время обработки (сек)'), default=0)
@@ -65,6 +88,9 @@ class PipelineExecution(models.Model):
         verbose_name = _('выполнение пайплайна')
         verbose_name_plural = _('выполнения пайплайнов')
         ordering = ['-started_at']
+        indexes = [
+            models.Index(fields=['status']),
+        ]
 
     def __str__(self):
         video_name = self.video.original_name if self.video else "Unknown Video"
@@ -74,7 +100,8 @@ class PipelineExecution(models.Model):
 class RiskDefinition(models.Model):
     """Определение риска/триггера для справочной информации."""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    trigger_source = models.CharField(_('источник триггера'), max_length=50, choices=AITrigger.TriggerSource.choices, unique=True)
+    code = models.CharField(_('код риска'), max_length=50, unique=True, db_index=True, default=uuid.uuid4, help_text=_('Код из таблицы рисков'))
+    trigger_source = models.CharField(_('источник триггера'), max_length=50, choices=AITrigger.TriggerSource.choices)
     name = models.CharField(_('название риска'), max_length=255)
     description = models.TextField(_('описание'))
     risk_level = models.CharField(
@@ -93,10 +120,14 @@ class RiskDefinition(models.Model):
     class Meta:
         verbose_name = _('определение риска')
         verbose_name_plural = _('определения рисков')
-        ordering = ['trigger_source']
+        ordering = ['code']
+        indexes = [
+            models.Index(fields=['code']),
+            models.Index(fields=['trigger_source']),
+        ]
 
     def __str__(self):
-        return f"{self.name} ({self.get_trigger_source_display()})"
+        return f"{self.name} [{self.code}]"
 
 
 class VerificationTask(models.Model):
@@ -116,9 +147,22 @@ class VerificationTask(models.Model):
         verbose_name=_('оператор'),
         limit_choices_to={'role': UserRole.OPERATOR}
     )
+    locked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='locked_tasks',
+        verbose_name=_('заблокировано'),
+        help_text=_('Оператор, который заблокировал задачу')
+    )
     status = models.CharField(_('статус'), max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True)
+    priority = models.IntegerField(_('приоритет'), default=0, help_text=_('Приоритет задачи (выше = важнее)'))
     
+    created_at = models.DateTimeField(_('дата создания'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('дата обновления'), auto_now=True)
     started_at = models.DateTimeField(_('время начала'), null=True, blank=True)
+    locked_at = models.DateTimeField(_('время блокировки'), null=True, blank=True)
     completed_at = models.DateTimeField(_('время завершения'), null=True, blank=True)
     total_processing_time = models.IntegerField(_('общее время обработки (сек)'), default=0)
     
@@ -130,7 +174,11 @@ class VerificationTask(models.Model):
     class Meta:
         verbose_name = _('задача на верификацию')
         verbose_name_plural = _('задачи на верификацию')
-        ordering = ['-id']
+        ordering = ['priority', 'created_at']
+        indexes = [
+            models.Index(fields=['status', 'priority', 'created_at']),
+            models.Index(fields=['operator', 'status']),
+        ]
 
     def __str__(self):
         video_name = self.video.original_name if self.video else "Unknown Video"
@@ -149,11 +197,13 @@ class VerificationTask(models.Model):
                 raise ValueError(f"Task {self.id} is not pending (current: {current_task.status})")
             
             self.operator = user
+            self.locked_by = user
             self.status = self.Status.IN_PROGRESS
             self.started_at = timezone.now()
+            self.locked_at = timezone.now()
             self.expires_at = timezone.now() + timedelta(hours=2)  # 2 часа блокировка
             self.last_heartbeat = timezone.now()
-            self.save(update_fields=['operator', 'status', 'started_at', 'expires_at', 'last_heartbeat'])
+            self.save(update_fields=['operator', 'locked_by', 'status', 'started_at', 'locked_at', 'expires_at', 'last_heartbeat'])
     
     def heartbeat(self):
         """Обновить время активности и продлить блокировку"""
@@ -177,12 +227,24 @@ class VerificationTask(models.Model):
         self.status = self.Status.COMPLETED
         self.completed_at = timezone.now()
         self.decision_summary = decision_summary
+        self.expires_at = None
+        self.locked_at = None
+        self.locked_by = None
+        self.last_heartbeat = None
         if self.started_at:
             self.total_processing_time = int((self.completed_at - self.started_at).total_seconds())
-        self.save(update_fields=['status', 'completed_at', 'decision_summary', 'total_processing_time'])
+        self.save(update_fields=[
+            'status', 'completed_at', 'decision_summary', 'total_processing_time',
+            'expires_at', 'locked_at', 'locked_by', 'last_heartbeat'
+        ])
+    
+    def complete_task(self, decision_summary=""):
+        """Alias for complete() to avoid missing method errors"""
+        return self.complete(decision_summary=decision_summary)
     
     def release_lock(self):
         """Освободить блокировку задачи (возвращает в PENDING)"""
+        from django.db import transaction
         from django.utils import timezone
         
         with transaction.atomic():
@@ -190,9 +252,15 @@ class VerificationTask(models.Model):
             if current_task.status == self.Status.IN_PROGRESS:
                 current_task.status = self.Status.PENDING
                 current_task.operator = None
+                current_task.locked_by = None
+                current_task.locked_at = None
                 current_task.expires_at = None
                 current_task.last_heartbeat = None
-                current_task.save(update_fields=['status', 'operator', 'expires_at', 'last_heartbeat'])
+                current_task.save(update_fields=['status', 'operator', 'locked_by', 'locked_at', 'expires_at', 'last_heartbeat'])
+    
+    def release(self):
+        """Alias for release_lock() for backward compatibility"""
+        return self.release_lock()
     
     def is_locked(self):
         """Проверить, заблокирована ли задача и не истекло ли время"""

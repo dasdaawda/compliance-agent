@@ -66,6 +66,11 @@ class OperatorLabel(models.Model):
         PROFANITY_SPEECH = "mat_speech", _("Мат (речь)")
         PORNOGRAPHY_18 = "nsfw_18", _("Порнография (18+)")
         VIOLENCE_18 = "violence_18", _("Насилие (18+)")
+    
+    class Status(models.TextChoices):
+        DRAFT = 'draft', _('Черновик')
+        SUBMITTED = 'submitted', _('Отправлено')
+        APPROVED = 'approved', _('Утверждено')
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     video = models.ForeignKey(Video, on_delete=models.CASCADE, related_name='operator_labels', verbose_name=_('видео'))
@@ -86,7 +91,30 @@ class OperatorLabel(models.Model):
     )
     
     start_time_sec = models.DecimalField(_('время начала (сек)'), max_digits=10, decimal_places=3)
+    end_time_sec = models.DecimalField(
+        _('время окончания (сек)'),
+        max_digits=10,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        help_text=_('Конец временного интервала метки')
+    )
     final_label = models.CharField(_('финальная метка'), max_length=50, choices=FinalLabel.choices, db_index=True)
+    confidence = models.DecimalField(
+        _('уверенность оператора'),
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text=_('Уверенность оператора в решении (0-100)')
+    )
+    status = models.CharField(
+        _('статус'),
+        max_length=20,
+        choices=Status.choices,
+        default=Status.SUBMITTED,
+        db_index=True
+    )
     comment = models.TextField(_('комментарий'), blank=True)
     
     created_at = models.DateTimeField(_('дата создания'), auto_now_add=True)
@@ -96,6 +124,17 @@ class OperatorLabel(models.Model):
         verbose_name = _('метка оператора')
         verbose_name_plural = _('метки операторов')
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['final_label']),
+            models.Index(fields=['status']),
+            models.Index(fields=['video', 'status']),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['video', 'ai_trigger', 'operator'],
+                name='unique_video_trigger_operator'
+            )
+        ]
 
     def __str__(self):
         return f"{self.get_final_label_display()} @ {self.start_time_sec}s"
