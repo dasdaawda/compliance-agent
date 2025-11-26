@@ -1,0 +1,69 @@
+<div class="decision-form">
+    <div class="mb-3">
+        <h6>{{ ai_trigger.get_trigger_source_display }} @ {{ ai_trigger.timestamp_sec }}s</h6>
+        {% if ai_trigger.data %}
+            <div class="alert alert-info py-2">
+                <small>
+                    {% if ai_trigger.data.text %}
+                        <strong>Текст:</strong> "{{ ai_trigger.data.text }}"
+                    {% elif ai_trigger.data.objects %}
+                        <strong>Объекты:</strong>
+                        <ul class="mb-0">
+                            {% for obj in ai_trigger.data.objects|slice:":3" %}
+                                <li>{{ obj.class_name }} ({{ obj.confidence|floatformat:2 }})</li>
+                            {% endfor %}
+                            {% if ai_trigger.data.objects|length > 3 %}
+                                <li>... и еще {{ ai_trigger.data.objects|length|add:"-3" }}</li>
+                            {% endif %}
+                        </ul>
+                    {% else %}
+                        <strong>Данные:</strong> {{ ai_trigger.data|truncatechars:100 }}
+                    {% endif %}
+                </small>
+            </div>
+        {% endif %}
+    </div>
+    
+    <form id="decision-form">
+        <div class="mb-3">
+            <label class="form-label">Решение:</label>
+            <div class="d-grid gap-2">
+                {% for label_value, label_display in available_labels %}
+                    <button type="button" 
+                            class="btn label-button {{ label_value }}"
+                            onclick="submitDecision('{{ ai_trigger.id }}', '{{ label_value }}', document.getElementById('comment-{{ ai_trigger.id }}').value)">
+                        {{ label_display }}
+                    </button>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="mb-3">
+            <label for="comment-{{ ai_trigger.id }}" class="form-label">Комментарий:</label>
+            <textarea id="comment-{{ ai_trigger.id }}" 
+                      class="form-control" 
+                      rows="3" 
+                      placeholder="Добавить комментарий..."></textarea>
+        </div>
+        
+        <div class="d-grid">
+            <button type="button" 
+                    class="btn btn-outline-secondary"
+                    onclick="clearDecisionPanel()">
+                Отмена
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+function clearDecisionPanel() {
+    document.getElementById('decision-panel-content').innerHTML = `
+        <div class="text-center text-muted py-4">
+            <i class="bi bi-hand-index display-4"></i>
+            <p class="mt-2">Выберите триггер для обработки</p>
+            <small>Нажмите на любой триггер слева</small>
+        </div>
+    `;
+}
+</script>

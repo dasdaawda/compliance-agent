@@ -1,0 +1,36 @@
+{% extends 'operators/base.html' %}
+
+{% block title %}Задача недоступна{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Задача недоступна
+                </h5>
+            </div>
+            <div class="card-body">
+                <p>Эта задача больше не доступна для работы.</p>
+                
+                <div class="alert alert-info">
+                    <strong>Возможные причины:</strong>
+                    <ul class="mb-0">
+                        <li>Задача была назначена другому оператору</li>
+                        <li>Задача была завершена</li>
+                        <li>Время блокировки истекло и задача вернулась в очередь</li>
+                    </ul>
+                </div>
+                
+                <div class="text-center mt-4">
+                    <a href="{% url 'operators:dashboard' %}" class="btn btn-primary">
+                        Вернуться к панели управления
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

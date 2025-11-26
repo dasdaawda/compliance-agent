@@ -1,0 +1,428 @@
+{% extends 'operators/base.html' %}
+
+{% block title %}Рабочее пространство - {{ video.original_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .workspace-grid {
+        height: calc(100vh - 200px);
+    }
+    .video-panel {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    .triggers-panel {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    .triggers-list {
+        flex: 1;
+        overflow-y: auto;
+    }
+    .decision-panel {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    .video-wrapper {
+        flex: 1;
+        position: relative;
+        background: #000;
+        min-height: 0;
+    }
+    video {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Task Info -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="task-info">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h5 class="mb-1">{{ video.original_name }}</h5>
+                        <small class="text-muted">
+                            Задача #{{ task.id|truncatechars:8 }} | 
+                            Начата: {{ task.started_at|date:"H:i" }} |
+                            {% if task.expires_at %}
+                                Истекает: {{ task.expires_at|date:"H:i" }}
+                            {% endif %}
+                        </small>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <button 
+                            class="btn btn-outline-danger"
+                            hx-post="{% url 'operators:release_task' task.id %}"
+                            hx-confirm="Вы уверены? Все несохраненные изменения будут потеряны."
+                            hx-target="body">
+                            Освободить задачу
+                        </button>
+                        <button 
+                            class="btn btn-success ms-2"
+                            onclick="completeVerification()">
+                            Завершить верификацию
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Workspace -->
+    <div class="row workspace-grid">
+        <!-- Left Panel: Video Player -->
+        <div class="col-md-5">
+            <div class="video-panel">
+                <h6>Видеоплеер</h6>
+                <div class="video-wrapper">
+                    {% if video.signed_url %}
+                        <video id="video-player" controls>
+                            <source src="{{ video.signed_url }}" type="video/mp4">
+                            Ваш браузер не поддерживает видео.
+                        </video>
+                    {% else %}
+                        <div class="d-flex align-items-center justify-content-center h-100">
+                            <div class="text-center text-white">
+                                <p>Видео недоступно</p>
+                                <small>Нет подписанного URL</small>
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    <div id="timestamp-indicator" class="timestamp-indicator" style="display: none;">
+                        <span id="current-time">00:00.000</span>
+                    </div>
+                </div>
+                
+                <!-- Decision Summary -->
+                <div class="mt-3">
+                    <label for="decision_summary" class="form-label">Итоговое решение:</label>
+                    <textarea 
+                        name="decision_summary" 
+                        id="decision_summary" 
+                        class="form-control" 
+                        rows="3"
+                        placeholder="Краткое описание принятых решений..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Middle Panel: AI Triggers -->
+        <div class="col-md-4">
+            <div class="triggers-panel">
+                <h6>AI Триггеры ({{ ai_triggers.count }})</h6>
+                <div class="triggers-list">
+                    {% if ai_triggers %}
+                        {% for trigger in ai_triggers %}
+                            {% include 'operators/partials/trigger_row.html' %}
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <p>Нет обработанных триггеров</p>
+                            <small>Все триггеры обработаны или их не было</small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Decision Form -->
+        <div class="col-md-3">
+            <div class="decision-panel">
+                <h6>Панель решений</h6>
+                <div id="decision-panel-content">
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-hand-index display-4"></i>
+                        <p class="mt-2">Выберите триггер для обработки</p>
+                        <small>Нажмите на любой триггер слева</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Include the workspace functionality inline for now
+class OperatorWorkspace {
+    constructor() {
+        this.currentTriggerId = null;
+        this.heartbeatInterval = null;
+        this.desyncThreshold = 0.75; // 750ms
+        
+        this.init();
+    }
+    
+    init() {
+        this.startHeartbeat();
+        this.setupVideoPlayer();
+    }
+    
+    startHeartbeat() {
+        // Send heartbeat every 30 seconds
+        this.heartbeatInterval = setInterval(() => {
+            this.sendHeartbeat();
+        }, 30000);
+    }
+    
+    sendHeartbeat() {
+        const taskId = this.getTaskId();
+        if (!taskId) return;
+        
+        fetch(`/operators/workspace/${taskId}/heartbeat/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': this.getCookie('csrftoken')
+            }
+        })
+        .catch(error => console.log('Heartbeat failed:', error));
+    }
+    
+    setupVideoPlayer() {
+        const video = document.getElementById('video-player');
+        if (!video) return;
+        
+        const indicator = document.getElementById('timestamp-indicator');
+        const timeDisplay = document.getElementById('current-time');
+        
+        if (indicator && timeDisplay) {
+            video.addEventListener('timeupdate', () => {
+                const time = video.currentTime;
+                const minutes = Math.floor(time / 60);
+                const seconds = (time % 60).toFixed(3);
+                timeDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.padStart(6, '0')}`;
+                indicator.style.display = 'block';
+            });
+            
+            video.addEventListener('seeking', () => {
+                indicator.style.display = 'block';
+            });
+        }
+    }
+    
+    getTaskId() {
+        // Extract task ID from current URL
+        const pathParts = window.location.pathname.split('/');
+        const taskIndex = pathParts.indexOf('workspace');
+        if (taskIndex !== -1 && pathParts.length > taskIndex + 1) {
+            return pathParts[taskIndex + 1];
+        }
+        return null;
+    }
+    
+    getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    cleanup() {
+        if (this.heartbeatInterval) {
+            clearInterval(this.heartbeatInterval);
+        }
+    }
+}
+
+// Global functions
+function selectTrigger(triggerId, timestamp) {
+    // Remove active class from all triggers
+    document.querySelectorAll('.trigger-row').forEach(row => {
+        row.classList.remove('active');
+    });
+    
+    // Add active class to selected trigger
+    const selectedRow = document.querySelector(`[data-trigger-id="${triggerId}"]`);
+    if (selectedRow) {
+        selectedRow.classList.add('active');
+    }
+    
+    // Load decision panel
+    htmx.ajax('GET', `/operators/workspace/{{ task.id }}/trigger/${triggerId}/labels/`, {
+        target: '#decision-panel-content'
+    });
+    
+    // Sync video player timestamp
+    const video = document.getElementById('video-player');
+    if (video && timestamp) {
+        const targetTime = parseFloat(timestamp);
+        const currentTime = video.currentTime;
+        const diff = Math.abs(currentTime - targetTime);
+        
+        // Show warning if desynced more than 0.75 seconds
+        if (diff > 0.75) {
+            showDesyncWarning(currentTime, targetTime);
+        }
+        
+        // Jump to timestamp
+        video.currentTime = targetTime;
+    }
+}
+
+function showDesyncWarning(current, target) {
+    // Remove existing warnings
+    document.querySelectorAll('.desync-warning').forEach(w => w.remove());
+    
+    const warningHtml = `
+        <div class="desync-warning">
+            <strong>Внимание:</strong> Время плеера (${current.toFixed(2)}с) отличается от времени триггера (${target.toFixed(2)}с)
+            <button class="btn btn-sm btn-primary ms-2" onclick="syncToTrigger(${target})">
+                Синхронизировать
+            </button>
+        </div>
+    `;
+    
+    const panel = document.getElementById('decision-panel-content');
+    if (panel) {
+        panel.insertAdjacentHTML('afterbegin', warningHtml);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            const warning = panel.querySelector('.desync-warning');
+            if (warning) warning.remove();
+        }, 5000);
+    }
+}
+
+function syncToTrigger(timestamp) {
+    const video = document.getElementById('video-player');
+    if (video) {
+        video.currentTime = timestamp;
+    }
+}
+
+function submitDecision(triggerId, finalLabel, comment) {
+    const data = {
+        final_label: finalLabel,
+        comment: comment || ''
+    };
+    
+    fetch(`/operators/workspace/{{ task.id }}/trigger/${triggerId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Remove the trigger row
+            const triggerRow = document.querySelector(`[data-trigger-id="${triggerId}"]`);
+            if (triggerRow) {
+                triggerRow.remove();
+            }
+            
+            // Clear decision panel
+            document.getElementById('decision-panel-content').innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-check-circle display-4 text-success"></i>
+                    <p class="mt-2">Триггер обработан</p>
+                    <small>Выберите следующий триггер</small>
+                </div>
+            `;
+            
+            // Update trigger count
+            const countElement = document.querySelector('.triggers-panel h6');
+            const currentCount = document.querySelectorAll('.trigger-row').length;
+            if (countElement) {
+                countElement.textContent = `AI Триггеры (${currentCount})`;
+            }
+            
+            // Check if all triggers are processed
+            if (currentCount === 0) {
+                const triggersList = document.querySelector('.triggers-list');
+                if (triggersList) {
+                    triggersList.innerHTML = `
+                        <div class="text-center text-muted py-4">
+                            <p>Все триггеры обработаны!</p>
+                            <small>Можно завершать верификацию</small>
+                        </div>
+                    `;
+                }
+            }
+        } else {
+            alert('Ошибка: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Произошла ошибка при отправке решения');
+    });
+}
+
+function completeVerification() {
+    const decisionSummary = document.getElementById('decision_summary').value;
+    
+    fetch(`/operators/workspace/{{ task.id }}/complete/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            decision_summary: decisionSummary
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = data.redirect_url;
+        } else {
+            alert('Ошибка: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Произошла ошибка при завершении верификации');
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Initialize workspace when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    window.workspace = new OperatorWorkspace();
+});
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', function() {
+    if (window.workspace) {
+        window.workspace.cleanup();
+    }
+});
+</script>
+{% endblock %}

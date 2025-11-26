@@ -2,6 +2,7 @@ import uuid
 from decimal import Decimal
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from projects.models import Video
 from users.models import UserRole
@@ -120,6 +121,11 @@ class VerificationTask(models.Model):
     started_at = models.DateTimeField(_('время начала'), null=True, blank=True)
     completed_at = models.DateTimeField(_('время завершения'), null=True, blank=True)
     total_processing_time = models.IntegerField(_('общее время обработки (сек)'), default=0)
+    
+    # Task locking fields
+    expires_at = models.DateTimeField(_('истекает в'), null=True, blank=True, help_text=_('Время, когда блокировка задачи истекает'))
+    last_heartbeat = models.DateTimeField(_('последний heartbeat'), null=True, blank=True, help_text=_('Последнее обновление активности оператора'))
+    decision_summary = models.TextField(_('суммарное решение'), blank=True, help_text=_('Итоговое описание принятых решений'))
 
     class Meta:
         verbose_name = _('задача на верификацию')
@@ -129,3 +135,77 @@ class VerificationTask(models.Model):
     def __str__(self):
         video_name = self.video.original_name if self.video else "Unknown Video"
         return f"Verification: {video_name}"
+    
+    def assign_to_operator(self, user):
+        """Назначить задачу оператору с блокировкой"""
+        from django.db import transaction
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        with transaction.atomic():
+            # Проверяем, что задача все еще доступна для назначения
+            current_task = VerificationTask.objects.select_for_update().get(id=self.id)
+            if current_task.status != self.Status.PENDING:
+                raise ValueError(f"Task {self.id} is not pending (current: {current_task.status})")
+            
+            self.operator = user
+            self.status = self.Status.IN_PROGRESS
+            self.started_at = timezone.now()
+            self.expires_at = timezone.now() + timedelta(hours=2)  # 2 часа блокировка
+            self.last_heartbeat = timezone.now()
+            self.save(update_fields=['operator', 'status', 'started_at', 'expires_at', 'last_heartbeat'])
+    
+    def heartbeat(self):
+        """Обновить время активности и продлить блокировку"""
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        if self.operator is None or self.status != self.Status.IN_PROGRESS:
+            raise ValueError("Cannot heartbeat on unassigned or non-in-progress task")
+        
+        self.last_heartbeat = timezone.now()
+        self.expires_at = timezone.now() + timedelta(hours=1)  # Продлеваем на 1 час
+        self.save(update_fields=['last_heartbeat', 'expires_at'])
+    
+    def complete(self, decision_summary=""):
+        """Завершить задачу с решением"""
+        from django.utils import timezone
+        
+        if self.operator is None or self.status != self.Status.IN_PROGRESS:
+            raise ValueError("Cannot complete unassigned or non-in-progress task")
+        
+        self.status = self.Status.COMPLETED
+        self.completed_at = timezone.now()
+        self.decision_summary = decision_summary
+        if self.started_at:
+            self.total_processing_time = int((self.completed_at - self.started_at).total_seconds())
+        self.save(update_fields=['status', 'completed_at', 'decision_summary', 'total_processing_time'])
+    
+    def release_lock(self):
+        """Освободить блокировку задачи (возвращает в PENDING)"""
+        from django.utils import timezone
+        
+        with transaction.atomic():
+            current_task = VerificationTask.objects.select_for_update().get(id=self.id)
+            if current_task.status == self.Status.IN_PROGRESS:
+                current_task.status = self.Status.PENDING
+                current_task.operator = None
+                current_task.expires_at = None
+                current_task.last_heartbeat = None
+                current_task.save(update_fields=['status', 'operator', 'expires_at', 'last_heartbeat'])
+    
+    def is_locked(self):
+        """Проверить, заблокирована ли задача и не истекло ли время"""
+        from django.utils import timezone
+        
+        if self.status != self.Status.IN_PROGRESS or self.expires_at is None:
+            return False
+        return timezone.now() < self.expires_at
+    
+    def is_stale(self):
+        """Проверить, устарела ли блокировка задачи"""
+        from django.utils import timezone
+        
+        if self.status != self.Status.IN_PROGRESS or self.expires_at is None:
+            return False
+        return timezone.now() > self.expires_at

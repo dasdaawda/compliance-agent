@@ -1,0 +1,9 @@
+<div class="d-grid gap-2">
+    {% for label_value, label_display in available_labels %}
+        <button type="button" 
+                class="btn label-button {{ label_value }}"
+                onclick="submitDecision('{{ ai_trigger.id }}', '{{ label_value }}', document.getElementById('comment-{{ ai_trigger.id }}').value)">
+            {{ label_display }}
+        </button>
+    {% endfor %}
+</div>
