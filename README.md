@@ -46,6 +46,30 @@ python backend/compliance_app/config_validator.py
 
 ### 3. Локальная разработка
 
+**Вариант A: С использованием Docker Compose (рекомендуется)**
+
+```bash
+# Скопируйте конфигурацию Docker
+cp .env.docker .env
+
+# Запустите все сервисы
+docker compose up -d
+
+# Выполните миграции
+docker compose exec web python manage.py migrate
+
+# Создайте суперпользователя
+docker compose exec web python manage.py createsuperuser
+
+# Просмотр логов
+docker compose logs -f web
+
+# Остановка сервисов
+docker compose down
+```
+
+**Вариант B: Локальная разработка без Docker**
+
 ```bash
 # Создайте виртуальное окружение
 python3.11 -m venv venv
@@ -53,7 +77,11 @@ source venv/bin/activate  # Linux/Mac
 # или venv\Scripts\activate  # Windows
 
 # Установите зависимости
-pip install -r requirements.txt
+pip install -r requirements.txt -r requirements.dev.txt
+
+# Настройте окружение для разработки
+export DJANGO_ENV=development
+export DATABASE_URL=sqlite:///db.sqlite3
 
 # Запустите миграции
 cd backend
@@ -72,7 +100,26 @@ python manage.py runserver
 celery -A compliance_app worker --loglevel=info
 ```
 
-### 4. Production деплой
+### 4. Быстрые команды (Makefile)
+
+```bash
+# Просмотр всех доступных команд
+make help
+
+# Docker разработка
+make docker-up           # Запустить все сервисы
+make docker-migrate      # Выполнить миграции
+make docker-logs         # Просмотр логов
+make docker-down         # Остановить сервисы
+
+# Локальная разработка
+make install            # Установить зависимости
+make migrate            # Выполнить миграции
+make test               # Запустить тесты
+make lint               # Проверить код
+```
+
+### 5. Production деплой
 
 Подробная инструкция по деплою на DigitalOcean App Platform:
 
@@ -106,7 +153,11 @@ celery -A compliance_app worker --loglevel=info
 ai-compliance-agent/
 ├── backend/                    # Django приложение
 │   ├── compliance_app/         # Основные настройки
-│   │   ├── settings.py         # Конфигурация (все через env vars)
+│   │   ├── settings/           # Модульные настройки Django
+│   │   │   ├── __init__.py     # Автоматический выбор окружения
+│   │   │   ├── base.py         # Общие настройки
+│   │   │   ├── dev.py          # Настройки разработки
+│   │   │   └── prod.py         # Настройки production
 │   │   └── config_validator.py # Валидатор конфигурации
 │   ├── users/                  # Управление пользователями (Client/Operator/Admin)
 │   ├── projects/               # Проекты и видео
@@ -114,10 +165,15 @@ ai-compliance-agent/
 │   ├── operators/              # Рабочий стол оператора
 │   ├── admins/                 # Админ-панель
 │   └── storage/                # Интеграция с B2/Cloudflare
+├── scripts/                    # Вспомогательные скрипты
+│   └── entrypoint.sh           # Docker entrypoint для миграций и collectstatic
 ├── celery-worker/              # Скрипты Celery worker
-├── .env.example                # Пример конфигурации
-├── Dockerfile                  # Docker образ
-├── requirements.txt            # Python зависимости
+├── .env.example                # Пример конфигурации для production
+├── .env.docker                 # Пример конфигурации для Docker Compose
+├── Dockerfile                  # Multi-stage Docker образ
+├── docker-compose.yml          # Docker Compose для локальной разработки
+├── requirements.txt            # Python зависимости (pinned versions)
+├── requirements.dev.txt        # Зависимости для разработки
 ├── CONFIGURATION.md            # Руководство по конфигурации
 ├── DEPLOYMENT.md               # Руководство по деплою
 └── README.md                   # Этот файл

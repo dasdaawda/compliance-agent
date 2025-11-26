@@ -2,11 +2,12 @@
 
 ## Содержание
 1. [Подготовка к деплою](#подготовка-к-деплою)
-2. [Настройка переменных окружения](#настройка-переменных-окружения)
-3. [Деплой на DigitalOcean App Platform](#деплой-на-digitalocean-app-platform)
-4. [Настройка внешних сервисов](#настройка-внешних-сервисов)
-5. [Проверка работоспособности](#проверка-работоспособности)
-6. [Troubleshooting](#troubleshooting)
+2. [Локальная разработка с Docker Compose](#локальная-разработка-с-docker-compose)
+3. [Настройка переменных окружения](#настройка-переменных-окружения)
+4. [Деплой на DigitalOcean App Platform](#деплой-на-digitalocean-app-platform)
+5. [Настройка внешних сервисов](#настройка-внешних-сервисов)
+6. [Проверка работоспособности](#проверка-работоспособности)
+7. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -30,6 +31,170 @@ cp .env.example .env
 
 # Откройте файл для редактирования
 nano .env
+```
+
+---
+
+## Локальная разработка с Docker Compose
+
+### Быстрый старт
+
+Docker Compose предоставляет полное окружение для локальной разработки со всеми необходимыми сервисами.
+
+#### 1. Скопируйте конфигурацию для Docker
+
+```bash
+# Создайте .env файл для docker-compose
+cp .env.docker .env
+
+# Или скопируйте .env.example и измените DJANGO_ENV на development
+cp .env.example .env
+nano .env  # Установите DJANGO_ENV=development
+```
+
+#### 2. Запустите сервисы
+
+```bash
+# Запуск всех сервисов в фоновом режиме
+docker compose up -d
+
+# Просмотр логов
+docker compose logs -f
+
+# Просмотр логов конкретного сервиса
+docker compose logs -f web
+docker compose logs -f celery-worker
+```
+
+#### 3. Выполните начальную настройку
+
+```bash
+# Выполните миграции
+docker compose exec web python manage.py migrate
+
+# Создайте суперпользователя
+docker compose exec web python manage.py createsuperuser
+
+# (Опционально) Загрузите тестовые данные
+docker compose exec web python manage.py loaddata fixtures/initial_data.json
+```
+
+#### 4. Откройте приложение
+
+- **Web приложение:** http://localhost:8000
+- **Django Admin:** http://localhost:8000/admin
+- **API Documentation:** http://localhost:8000/api/docs/
+- **MinIO Console:** http://localhost:9001 (user: minioadmin, pass: minioadmin)
+
+### Управление сервисами
+
+```bash
+# Остановить все сервисы
+docker compose down
+
+# Остановить и удалить volumes (ОСТОРОЖНО: удалит все данные)
+docker compose down -v
+
+# Перезапустить конкретный сервис
+docker compose restart web
+
+# Пересобрать образы после изменения кода
+docker compose up -d --build
+
+# Просмотр статуса сервисов
+docker compose ps
+
+# Выполнить команду в контейнере
+docker compose exec web python manage.py shell
+docker compose exec web python manage.py test
+
+# Просмотр логов Celery worker
+docker compose exec celery-worker celery -A compliance_app inspect active
+```
+
+### Структура сервисов
+
+Docker Compose запускает следующие сервисы:
+
+| Сервис | Порт | Описание |
+|--------|------|----------|
+| **web** | 8000 | Django веб-приложение |
+| **celery-worker** | - | Celery worker для обработки AI задач |
+| **celery-beat** | - | Celery beat для периодических задач |
+| **postgres** | 5432 | PostgreSQL база данных |
+| **redis** | 6379 | Redis (Celery broker & cache) |
+| **minio** | 9000, 9001 | MinIO (S3-compatible storage) |
+
+### Настройка MinIO bucket
+
+После первого запуска создайте bucket в MinIO:
+
+```bash
+# Вариант 1: Через Web UI
+# Откройте http://localhost:9001
+# Login: minioadmin / minioadmin
+# Создайте bucket: ai-compliance-videos
+
+# Вариант 2: Через CLI
+docker compose exec minio mc alias set local http://localhost:9000 minioadmin minioadmin
+docker compose exec minio mc mb local/ai-compliance-videos
+docker compose exec minio mc anonymous set download local/ai-compliance-videos
+```
+
+### Проверка работоспособности
+
+```bash
+# Проверка Django
+docker compose exec web python manage.py check
+
+# Проверка подключения к БД
+docker compose exec web python manage.py dbshell
+
+# Проверка Celery
+docker compose exec celery-worker celery -A compliance_app inspect ping
+
+# Проверка Redis
+docker compose exec redis redis-cli ping
+```
+
+### Troubleshooting Docker Compose
+
+**Проблема: Контейнеры не запускаются**
+
+```bash
+# Проверьте логи
+docker compose logs
+
+# Проверьте, что порты не заняты
+netstat -tulpn | grep -E '8000|5432|6379|9000'
+
+# Пересоздайте контейнеры
+docker compose down -v
+docker compose up -d --build
+```
+
+**Проблема: База данных не готова**
+
+Entrypoint скрипт автоматически ждёт готовности PostgreSQL. Если возникают проблемы:
+
+```bash
+# Проверьте статус PostgreSQL
+docker compose exec postgres pg_isready
+
+# Перезапустите сервисы в правильном порядке
+docker compose up -d postgres redis minio
+sleep 10
+docker compose up -d web celery-worker celery-beat
+```
+
+**Проблема: Изменения кода не применяются**
+
+```bash
+# Перезапустите с пересборкой
+docker compose up -d --build
+
+# Для горячей перезагрузки (без пересборки) - используйте volume mounting
+# Уже настроено в docker-compose.yml для backend/
 ```
 
 ---

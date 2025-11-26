@@ -1,5 +1,53 @@
 # ⚙️ Конфигурация приложения
 
+## Структура настроек Django
+
+Приложение использует модульную структуру настроек для различных окружений:
+
+```
+backend/compliance_app/settings/
+├── __init__.py      # Автоматический выбор окружения по DJANGO_ENV
+├── base.py          # Общие настройки для всех окружений
+├── dev.py           # Настройки разработки (DEBUG=True)
+└── prod.py          # Настройки production (безопасность, валидация)
+```
+
+### Выбор окружения
+
+Окружение определяется переменной `DJANGO_ENV`:
+
+```bash
+# Для разработки
+export DJANGO_ENV=development
+
+# Для production (по умолчанию)
+export DJANGO_ENV=production
+
+# Или через .env файл
+echo "DJANGO_ENV=development" >> .env
+```
+
+**Важно:** `DJANGO_SETTINGS_MODULE` всегда указывает на `compliance_app.settings`, а выбор конкретного файла (dev/prod) происходит автоматически через `__init__.py`.
+
+### Development (dev.py)
+
+- `DEBUG = True`
+- `ALLOWED_HOSTS = ['*']`
+- SQLite по умолчанию (или PostgreSQL через DATABASE_URL)
+- Email в консоль
+- Без HTTPS redirect
+- Replicate токен не обязателен
+
+### Production (prod.py)
+
+- `DEBUG = False` (обязательно)
+- `ALLOWED_HOSTS` должен быть задан
+- PostgreSQL обязателен
+- SMTP email обязателен
+- HTTPS redirects включены
+- Валидация всех критических переменных
+- Сжатие статических файлов (WhiteNoise)
+
 ## Быстрый старт
 
 ### 1. Создайте файл конфигурации
@@ -59,6 +107,7 @@ python backend/compliance_app/config_validator.py
 
 | Переменная | Описание | Пример |
 |------------|----------|---------|
+| `DJANGO_ENV` | Окружение (development/production) | `production` |
 | `SECRET_KEY` | Секретный ключ Django | `django-insecure-abc123...` |
 | `DATABASE_URL` | URL подключения к PostgreSQL | `postgres://user:pass@host:5432/db` |
 | `REDIS_URL` | URL подключения к Redis | `redis://localhost:6379/0` |
