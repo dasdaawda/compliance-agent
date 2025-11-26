@@ -1,0 +1,71 @@
+<div class="modal-header">
+    <h5 class="modal-title">Отчет AI для "{{ video.original_name }}"</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+    {% if report %}
+        <h6>Общая информация</h6>
+        <ul class="list-unstyled">
+            <li><strong>Статус:</strong> 
+                {% if video.status == 'COMPLETED' %}
+                    <span class="badge bg-success">Завершено</span>
+                {% else %}
+                    <span class="badge bg-warning">{{ video.get_status_display }}</span>
+                {% endif %}
+            </li>
+            <li><strong>Длительность:</strong> {{ video.duration|floatformat:0 }} сек</li>
+            {% if report.summary %}
+                <li><strong>Сводка:</strong> {{ report.summary }}</li>
+            {% endif %}
+        </ul>
+
+        {% if report.risks %}
+            <h6 class="mt-4">Обнаруженные риски ({{ report.risks|length }})</h6>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Временная метка</th>
+                            <th>Тип</th>
+                            <th>Уверенность</th>
+                            <th>Описание</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for risk in report.risks %}
+                        <tr>
+                            <td>{{ risk.timestamp|floatformat:2 }}s</td>
+                            <td>
+                                <span class="badge bg-warning">{{ risk.type }}</span>
+                            </td>
+                            <td>{{ risk.confidence|floatformat:2 }}%</td>
+                            <td>{{ risk.description|truncatewords:15 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-success mt-3">
+                <i class="bi bi-check-circle"></i> Риски не обнаружены
+            </div>
+        {% endif %}
+
+        {% if report.metadata %}
+            <h6 class="mt-4">Метаданные</h6>
+            <pre class="bg-light p-3 rounded"><code>{{ report.metadata|pprint }}</code></pre>
+        {% endif %}
+    {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> Отчет AI еще не готов. Видео находится в обработке.
+        </div>
+    {% endif %}
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+    {% if report %}
+        <a href="#" class="btn btn-primary" download>
+            <i class="bi bi-download"></i> Скачать отчет
+        </a>
+    {% endif %}
+</div>

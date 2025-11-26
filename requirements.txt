@@ -17,3 +17,7 @@ django-htmx
 django-celery-email
 python-dotenv
 tenacity
+djangorestframework
+djangorestframework-simplejwt
+drf-spectacular
+django-filter

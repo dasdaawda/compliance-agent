@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Панель управления - AI Compliance Agent{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">Панель управления</h1>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-folder"></i> Проекты
+                </h5>
+                <h2>{{ total_projects }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-film"></i> Всего видео
+                </h5>
+                <h2>{{ total_videos }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-hourglass-split"></i> В обработке
+                </h5>
+                <h2>{{ processing_videos }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-check-circle"></i> Завершено
+                </h5>
+                <h2>{{ completed_videos }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Мои проекты</h5>
+                <button class="btn btn-primary btn-sm" 
+                        hx-get="{% url 'projects:project_create_partial' %}" 
+                        hx-target="#modal-content"
+                        hx-swap="innerHTML"
+                        data-bs-toggle="modal"
+                        data-bs-target="#actionModal">
+                    <i class="bi bi-plus-circle"></i> Создать проект
+                </button>
+            </div>
+            <div class="card-body" 
+                 id="projects-list"
+                 hx-get="{% url 'projects:project_list_partial' %}" 
+                 hx-trigger="load, projectCreated from:body"
+                 hx-swap="innerHTML">
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for actions -->
+<div class="modal fade" id="actionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" id="modal-content">
+            <!-- Content will be loaded here via HTMX -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.body.addEventListener('htmx:afterSwap', function(event) {
+        if (event.detail.target.id === 'modal-content') {
+            const modal = document.getElementById('actionModal');
+            if (modal) {
+                const bsModal = new bootstrap.Modal(modal);
+                bsModal.show();
+            }
+        }
+    });
+
+    document.body.addEventListener('projectCreated', function() {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('actionModal'));
+        if (modal) {
+            modal.hide();
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,85 @@
+{% if videos %}
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Название</th>
+                    <th>Статус</th>
+                    <th>Длительность</th>
+                    <th>Размер</th>
+                    <th>Загружено</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for video in videos %}
+                <tr>
+                    <td>{{ video.original_name }}</td>
+                    <td>
+                        {% if video.status == 'UPLOADED' %}
+                            <span class="badge bg-secondary">Загружено</span>
+                        {% elif video.status == 'PROCESSING' %}
+                            <span class="badge bg-warning">Обработка</span>
+                        {% elif video.status == 'VERIFICATION' %}
+                            <span class="badge bg-info">Верификация</span>
+                        {% elif video.status == 'COMPLETED' %}
+                            <span class="badge bg-success">Завершено</span>
+                        {% elif video.status == 'FAILED' %}
+                            <span class="badge bg-danger">Ошибка</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if video.duration %}
+                            {{ video.duration|floatformat:0 }} сек
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if video.file_size %}
+                            {{ video.file_size|filesizeformat }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>{{ video.created_at|date:"d.m.Y H:i" }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary"
+                                hx-get="{% url 'projects:report_detail_partial' video.id %}"
+                                hx-target="#report-modal-content"
+                                hx-swap="innerHTML"
+                                data-bs-toggle="modal"
+                                data-bs-target="#reportModal">
+                            <i class="bi bi-file-text"></i> Отчет
+                        </button>
+                        {% if video.video_url %}
+                            <button class="btn btn-sm btn-outline-success"
+                                    hx-get="{% url 'projects:video_signed_url' video.id %}"
+                                    hx-target="#video-player-{{ video.id }}"
+                                    hx-swap="innerHTML">
+                                <i class="bi bi-play-circle"></i> Просмотр
+                            </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr id="video-player-{{ video.id }}" style="display: none;">
+                    <td colspan="6"></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="text-center py-4">
+        <p class="text-muted">В этом проекте пока нет видео</p>
+    </div>
+{% endif %}
+
+<!-- Report Modal -->
+<div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" id="report-modal-content">
+            <!-- Content will be loaded here via HTMX -->
+        </div>
+    </div>
+</div>

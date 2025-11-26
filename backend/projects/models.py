@@ -56,6 +56,7 @@ class Video(models.Model):
         blank=True
     )
     video_url = models.URLField(_('URL видео'), max_length=2000, null=True, blank=True)
+    checksum = models.CharField(_('контрольная сумма'), max_length=64, blank=True, db_index=True)
     
     duration = models.IntegerField(_('длительность (секунды)'), default=0)
     file_size = models.BigIntegerField(_('размер файла (байты)'), default=0)
