@@ -1,0 +1,270 @@
+version: '3.8'
+
+# ============================================================
+# AI-Compliance Agent - Docker Compose Configuration
+# ============================================================
+# Services: web, celery-worker, celery-beat, redis, postgres, minio
+
+services:
+  # ============================================================
+  # PostgreSQL Database
+  # ============================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: compliance-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ai_compliance_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - compliance-network
+
+  # ============================================================
+  # Redis (Celery Broker & Cache)
+  # ============================================================
+  redis:
+    image: redis:7-alpine
+    container_name: compliance-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - compliance-network
+
+  # ============================================================
+  # MinIO (S3-compatible storage for local development)
+  # ============================================================
+  minio:
+    image: minio/minio:latest
+    container_name: compliance-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"  # API
+      - "9001:9001"  # Console
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - compliance-network
+
+  # ============================================================
+  # Django Web Application
+  # ============================================================
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: compliance-web
+    command: gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 --access-logfile - --error-logfile - compliance_app.wsgi:application
+    environment:
+      # Django settings
+      DJANGO_SETTINGS_MODULE: compliance_app.settings
+      DJANGO_ENV: ${DJANGO_ENV:-development}
+      SECRET_KEY: ${SECRET_KEY:-unsafe-dev-secret-key-change-me}
+      DEBUG: ${DEBUG:-True}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,web}
+      
+      # Database
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-ai_compliance_db}
+      
+      # Redis
+      REDIS_URL: redis://redis:6379/0
+      
+      # Backblaze B2 (use MinIO for local development)
+      BACKBLAZE_ENDPOINT_URL: ${BACKBLAZE_ENDPOINT_URL:-http://minio:9000}
+      BACKBLAZE_APPLICATION_KEY_ID: ${BACKBLAZE_APPLICATION_KEY_ID:-minioadmin}
+      BACKBLAZE_APPLICATION_KEY: ${BACKBLAZE_APPLICATION_KEY:-minioadmin}
+      BACKBLAZE_BUCKET_NAME: ${BACKBLAZE_BUCKET_NAME:-ai-compliance-videos}
+      CLOUDFLARE_CDN_URL: ${CLOUDFLARE_CDN_URL:-}
+      
+      # Replicate AI
+      REPLICATE_API_TOKEN: ${REPLICATE_API_TOKEN:-dummy_token_for_dev}
+      
+      # Email
+      EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
+      EMAIL_HOST: ${EMAIL_HOST:-localhost}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_USE_TLS: ${EMAIL_USE_TLS:-True}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-noreply@localhost}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@localhost}
+      
+      # Pipeline settings
+      MAX_VIDEO_FILE_SIZE: ${MAX_VIDEO_FILE_SIZE:-2147483648}
+      MAX_VIDEO_DURATION: ${MAX_VIDEO_DURATION:-7200}
+      FRAME_EXTRACTION_FPS: ${FRAME_EXTRACTION_FPS:-1}
+      TEMP_DIR: /tmp
+      
+      # Dashboard
+      DASHBOARD_URL: ${DASHBOARD_URL:-http://localhost:8000}
+    volumes:
+      - static_data:/app/backend/staticfiles
+      - media_data:/app/backend/media
+      - ./backend:/app/backend:ro  # Read-only for security
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/admin/login/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - compliance-network
+    restart: unless-stopped
+
+  # ============================================================
+  # Celery Worker (AI Pipeline Processing)
+  # ============================================================
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: compliance-celery-worker
+    command: celery -A compliance_app worker --loglevel=info --concurrency=2 --max-tasks-per-child=100
+    environment:
+      # Django settings
+      DJANGO_SETTINGS_MODULE: compliance_app.settings
+      DJANGO_ENV: ${DJANGO_ENV:-development}
+      SECRET_KEY: ${SECRET_KEY:-unsafe-dev-secret-key-change-me}
+      DEBUG: ${DEBUG:-True}
+      
+      # Database
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-ai_compliance_db}
+      
+      # Redis
+      REDIS_URL: redis://redis:6379/0
+      
+      # Backblaze B2 (use MinIO for local development)
+      BACKBLAZE_ENDPOINT_URL: ${BACKBLAZE_ENDPOINT_URL:-http://minio:9000}
+      BACKBLAZE_APPLICATION_KEY_ID: ${BACKBLAZE_APPLICATION_KEY_ID:-minioadmin}
+      BACKBLAZE_APPLICATION_KEY: ${BACKBLAZE_APPLICATION_KEY:-minioadmin}
+      BACKBLAZE_BUCKET_NAME: ${BACKBLAZE_BUCKET_NAME:-ai-compliance-videos}
+      CLOUDFLARE_CDN_URL: ${CLOUDFLARE_CDN_URL:-}
+      
+      # Replicate AI
+      REPLICATE_API_TOKEN: ${REPLICATE_API_TOKEN:-dummy_token_for_dev}
+      
+      # Email
+      EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
+      EMAIL_HOST: ${EMAIL_HOST:-localhost}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-noreply@localhost}
+      
+      # Pipeline settings
+      MAX_VIDEO_FILE_SIZE: ${MAX_VIDEO_FILE_SIZE:-2147483648}
+      MAX_VIDEO_DURATION: ${MAX_VIDEO_DURATION:-7200}
+      FRAME_EXTRACTION_FPS: ${FRAME_EXTRACTION_FPS:-1}
+      TEMP_DIR: /tmp
+    volumes:
+      - media_data:/app/backend/media
+      - ./backend:/app/backend:ro  # Read-only for security
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A compliance_app inspect ping || exit 1"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 120s
+    networks:
+      - compliance-network
+    restart: unless-stopped
+
+  # ============================================================
+  # Celery Beat (Periodic Tasks Scheduler)
+  # ============================================================
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: compliance-celery-beat
+    command: celery -A compliance_app beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    environment:
+      # Django settings
+      DJANGO_SETTINGS_MODULE: compliance_app.settings
+      DJANGO_ENV: ${DJANGO_ENV:-development}
+      SECRET_KEY: ${SECRET_KEY:-unsafe-dev-secret-key-change-me}
+      DEBUG: ${DEBUG:-True}
+      
+      # Database
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-ai_compliance_db}
+      
+      # Redis
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./backend:/app/backend:ro  # Read-only for security
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    networks:
+      - compliance-network
+    restart: unless-stopped
+
+# ============================================================
+# Named Volumes for Data Persistence
+# ============================================================
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+  static_data:
+    driver: local
+  media_data:
+    driver: local
+
+# ============================================================
+# Network Configuration
+# ============================================================
+networks:
+  compliance-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16

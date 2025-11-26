@@ -57,3 +57,11 @@ coverage.xml
 # Backup files
 *.bak
 *~
+*.old.py
+
+# Docker volumes
+postgres_data/
+redis_data/
+minio_data/
+static_data/
+media_data/
