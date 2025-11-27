@@ -41,6 +41,7 @@
 {% endblock %}
 
 {% block content %}
+{{ final_label_choices|json_script:"final-label-choices" }}
 <div class="container-fluid">
     <!-- Task Info -->
     <div class="row mb-3">
@@ -130,6 +131,12 @@
                             <small>Все триггеры обработаны или их не было</small>
                         </div>
                     {% endif %}
+                </div>
+                <div class="mt-3">
+                    <button class="btn btn-outline-primary w-100"
+                            onclick="openManualRiskModal()">
+                        <i class="bi bi-plus-circle"></i> Добавить риск вручную
+                    </button>
                 </div>
             </div>
         </div>
@@ -370,6 +377,103 @@ function submitDecision(triggerId, finalLabel, comment) {
         alert('Произошла ошибка при отправке решения');
     });
 }
+
+
+function openManualRiskModal() {
+    const choicesData = JSON.parse(document.getElementById('final-label-choices').textContent || '[]');
+    let options = '';
+    for (const [value, label] of choicesData) {
+        options += `<option value="${value}">${label}</option>`;
+    }
+    
+    const formHtml = `
+        <div class="manual-risk-form">
+            <h6>Добавить риск вручную</h6>
+            <div class="mb-3">
+                <label class="form-label">Таймкод (секунды)</label>
+                <input type="number" class="form-control" id="manual-risk-time" 
+                       placeholder="Например: 123.5" step="0.001" min="0">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Категория</label>
+                <select class="form-select" id="manual-risk-label">${options}</select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Комментарий</label>
+                <textarea class="form-control" id="manual-risk-comment" rows="3" 
+                          placeholder="Опишите найденный риск..."></textarea>
+            </div>
+            <div class="d-flex justify-content-end gap-2">
+                <button class="btn btn-outline-secondary" onclick="closeManualRiskModal()">Отмена</button>
+                <button class="btn btn-primary" onclick="submitManualRisk()">Сохранить</button>
+            </div>
+        </div>
+    `;
+    const modalContainer = document.getElementById('decision-panel-content');
+    if (modalContainer) {
+        modalContainer.innerHTML = formHtml;
+    }
+}
+
+function closeManualRiskModal() {
+    const defaultContent = `
+        <div class="text-center text-muted py-4">
+            <i class="bi bi-hand-index display-4"></i>
+            <p class="mt-2">Выберите триггер для обработки</p>
+            <small>Нажмите на любой триггер слева</small>
+        </div>
+    `;
+    document.getElementById('decision-panel-content').innerHTML = defaultContent;
+}
+
+function submitManualRisk() {
+    const timeValue = parseFloat(document.getElementById('manual-risk-time').value);
+    const labelValue = document.getElementById('manual-risk-label').value;
+    const commentValue = document.getElementById('manual-risk-comment').value;
+    
+    if (isNaN(timeValue) || timeValue < 0) {
+        alert('Укажите корректный таймкод (0 или больше)');
+        return;
+    }
+    
+    const taskId = getTaskId();
+    if (!taskId) {
+        alert('Не удалось определить ID задачи');
+        return;
+    }
+    
+    fetch(`/operators/workspace/${taskId}/manual-label/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            start_time_sec: timeValue,
+            final_label: labelValue,
+            comment: commentValue
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeManualRiskModal();
+            alert('Риск успешно добавлен!');
+        } else {
+            alert('Ошибка: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Произошла ошибка при добавлении риска');
+    });
+}
+
+function getTaskId() {
+    const match = window.location.pathname.match(/workspace\/([a-f0-9-]+)\//);
+    return match ? match[1] : null;
+}
+
 
 function completeVerification() {
     const decisionSummary = document.getElementById('decision_summary').value;

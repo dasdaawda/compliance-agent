@@ -1,0 +1,67 @@
+coca cola
+coca-cola
+pepsi
+nike
+adidas
+apple
+samsung
+huawei
+xiaomi
+mcdonalds
+kfc
+burger king
+starbucks
+amazon
+google
+microsoft
+intel
+amd
+nvidia
+toyota
+bmw
+mercedes
+volkswagen
+porsche
+ferrari
+lamborghini
+chanel
+gucci
+prada
+louis vuitton
+zara
+h&m
+ikea
+levis
+converse
+puma
+reebok
+under armour
+gap
+tommy hilfiger
+ralph lauren
+sony
+lg
+panasonic
+canon
+nikon
+loreal
+maybelline
+nivea
+dove
+gillette
+nestlé
+unilever
+procter gamble
+johnson johnson
+colgate
+heineken
+budweiser
+corona
+carlsberg
+tuborg
+red bull
+monster energy
+rockstar
+sprite
+fanta
+schweppes

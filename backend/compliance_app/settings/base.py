@@ -178,10 +178,10 @@ FRAME_EXTRACTION_FPS = env.int('FRAME_EXTRACTION_FPS', default=1)
 ALLOWED_VIDEO_FORMATS = env.list('ALLOWED_VIDEO_FORMATS', default=['mp4', 'avi', 'mov', 'mkv', 'webm'])
 DASHBOARD_URL = env('DASHBOARD_URL', default='https://app.example.com')
 
-# NLP Dictionaries (optional)
-PROFANITY_DICT_PATH = env('PROFANITY_DICT_PATH', default='')
-BRAND_DICT_PATH = env('BRAND_DICT_PATH', default='')
-STOPWORDS_DICT_PATH = env('STOPWORDS_DICT_PATH', default='')
+# NLP Dictionaries
+PROFANITY_DICT_PATH = env('PROFANITY_DICT_PATH', default=str(BASE_DIR / 'ai_pipeline' / 'dictionaries' / 'profanity_ru.txt'))
+BRAND_DICT_PATH = env('BRAND_DICT_PATH', default=str(BASE_DIR / 'ai_pipeline' / 'dictionaries' / 'brands.txt'))
+STOPWORDS_DICT_PATH = env('STOPWORDS_DICT_PATH', default=str(BASE_DIR / 'ai_pipeline' / 'dictionaries' / 'stopwords_legal.txt'))
 
 # Temporary Directory
 TEMP_DIR = env('TEMP_DIR', default='/tmp')
