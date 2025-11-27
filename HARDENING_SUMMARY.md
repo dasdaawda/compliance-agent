@@ -138,7 +138,7 @@ Features:
 - Updated project structure diagram
 - Two development options (Docker vs local)
 
-**DEPLOYMENT.md** (UPDATED)
+**docs/DEPLOYMENT.md** (UPDATED)
 - Added complete Docker Compose section
 - Service management commands
 - Troubleshooting for Docker

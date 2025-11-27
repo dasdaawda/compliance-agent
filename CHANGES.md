@@ -116,7 +116,7 @@
 - Валидация конфигурации
 - Генерация SECRET_KEY
 
-**`DEPLOYMENT.md`** - Руководство по деплою:
+**`docs/DEPLOYMENT.md`** - Руководство по деплою:
 - Пошаговая инструкция деплоя на DigitalOcean App Platform
 - Настройка компонентов (Web Service, Celery Worker, Databases)
 - Конфигурация Environment Variables в DigitalOcean
@@ -176,7 +176,7 @@ if not REPLICATE_API_TOKEN and not DEBUG:
 1. Заполните `.env` файл реальными credentials
 2. Проверьте конфигурацию: `python backend/compliance_app/config_validator.py`
 3. Протестируйте локально: `python backend/manage.py runserver`
-4. Следуйте `DEPLOYMENT.md` для production деплоя
+4. Следуйте `docs/DEPLOYMENT.md` для production деплоя
 
 ## Файлы для review
 
@@ -184,7 +184,7 @@ if not REPLICATE_API_TOKEN and not DEBUG:
 - `backend/compliance_app/settings.py` - новые переменные окружения
 - `backend/compliance_app/config_validator.py` - логика валидации
 - `CONFIGURATION.md` - документация по конфигурации
-- `DEPLOYMENT.md` - документация по деплою
+- `docs/DEPLOYMENT.md` - документация по деплою
 - `README.md` - обновленное описание проекта
 
 ---

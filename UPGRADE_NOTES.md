@@ -194,7 +194,7 @@ sudo systemctl restart myapp
 ## Support
 
 - 📖 See [README.md](README.md) for general documentation
-- 🚀 See [DEPLOYMENT.md](DEPLOYMENT.md) for deployment guide
+- 🚀 See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for deployment guide
 - ⚙️ See [CONFIGURATION.md](CONFIGURATION.md) for settings
 - 🐳 See [DOCKER_QUICKSTART.md](DOCKER_QUICKSTART.md) for Docker
 - ✅ See [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md) for checklist

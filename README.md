@@ -121,9 +121,9 @@ make lint               # Проверить код
 
 ### 5. Production деплой
 
-Подробная инструкция по деплою на DigitalOcean App Platform:
+Подробная инструкция по деплою на production:
 
-👉 [DEPLOYMENT.md](DEPLOYMENT.md)
+👉 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
 
 ## 🏗️ Архитектура
 
@@ -177,7 +177,7 @@ ai-compliance-agent/
 ├── requirements.txt            # Python зависимости (pinned versions)
 ├── requirements.dev.txt        # Зависимости для разработки
 ├── CONFIGURATION.md            # Руководство по конфигурации
-├── DEPLOYMENT.md               # Руководство по деплою
+├── docs/DEPLOYMENT.md               # Руководство по деплою
 └── README.md                   # Этот файл
 ```
 
@@ -188,7 +188,7 @@ ai-compliance-agent/
 - **[docs/API.md](docs/API.md)** - Руководство по REST API и HTMX интерфейсам
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Архитектура системы и компоненты
 - **[CONFIGURATION.md](CONFIGURATION.md)** - Подробное руководство по настройке переменных окружения
-- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Пошаговая инструкция по деплою на DigitalOcean
+- **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Production deployment manual
 
 ### Дополнительные материалы
 
@@ -299,7 +299,7 @@ doctl apps logs YOUR_APP_ID --type worker
 
 ### Troubleshooting
 
-Проблемы с деплоем? См. [DEPLOYMENT.md - Troubleshooting](DEPLOYMENT.md#troubleshooting)
+Проблемы с деплоем? См. [docs/DEPLOYMENT.md - Troubleshooting](docs/DEPLOYMENT.md#troubleshooting)
 
 ### Частые проблемы
 
@@ -355,4 +355,4 @@ Proprietary - All rights reserved
 
 **Готово к деплою! 🎉**
 
-Начните с [CONFIGURATION.md](CONFIGURATION.md), затем [DEPLOYMENT.md](DEPLOYMENT.md)
+Начните с [CONFIGURATION.md](CONFIGURATION.md), затем [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)

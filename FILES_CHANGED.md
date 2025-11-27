@@ -26,7 +26,7 @@
 
 ### Documentation
 - `README.md` - **UPDATED** with Docker Compose instructions
-- `DEPLOYMENT.md` - **UPDATED** with Docker section
+- `docs/DEPLOYMENT.md` - **UPDATED** with Docker section
 - `CONFIGURATION.md` - **UPDATED** with settings structure
 - `.env.example` - **UPDATED** with DJANGO_ENV and security settings
 - `DOCKER_QUICKSTART.md` - **NEW** quick start guide
@@ -80,7 +80,7 @@ ai-compliance-agent/
 │
 └── Documentation:
     ├── README.md                 # Updated with Docker
-    ├── DEPLOYMENT.md             # Updated with Docker
+    ├── docs/DEPLOYMENT.md             # Updated with Docker
     ├── CONFIGURATION.md          # Updated with settings
     ├── DOCKER_QUICKSTART.md      # Quick start guide
     ├── DEPLOYMENT_CHECKLIST.md   # Deployment checklist
