@@ -100,7 +100,13 @@ class PipelineExecution(models.Model):
 class RiskDefinition(models.Model):
     """Определение риска/триггера для справочной информации."""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    code = models.CharField(_('код риска'), max_length=50, unique=True, db_index=True, default=uuid.uuid4, help_text=_('Код из таблицы рисков'))
+    code = models.CharField(
+        _('код риска'),
+        max_length=50,
+        unique=True,
+        db_index=True,
+        help_text=_('Код из таблицы рисков')
+    )
     trigger_source = models.CharField(_('источник триггера'), max_length=50, choices=AITrigger.TriggerSource.choices)
     name = models.CharField(_('название риска'), max_length=255)
     description = models.TextField(_('описание'))

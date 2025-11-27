@@ -42,10 +42,44 @@ class LabelingService:
             mapping = {}
             if FinalLabel:
                 mapping_pairs = {
-                    AITrigger.TriggerSource.YOLO_OBJECT: [FinalLabel.OK, FinalLabel.AD_BRAND],
-                    AITrigger.TriggerSource.WHISPER_PROFANITY: [FinalLabel.OK_FALSE, FinalLabel.PROFANITY_SPEECH],
-                    AITrigger.TriggerSource.FALCONSAI_NSFW: [FinalLabel.OK, FinalLabel.PORNOGRAPHY_18],
-                    AITrigger.TriggerSource.VIOLENCE_DETECTOR: [FinalLabel.OK, FinalLabel.VIOLENCE_18],
+                    # YOLO Object Detection - алкоголь, табак, бренды
+                    AITrigger.TriggerSource.YOLO_OBJECT: [
+                        FinalLabel.OK, 
+                        FinalLabel.AD_BRAND,
+                        FinalLabel.ALCOHOL_VISIBLE,
+                        FinalLabel.TOBACCO_VAPE,
+                        FinalLabel.PROHIBITED_SYMBOLS,
+                        FinalLabel.TATTOO_GENERAL,
+                    ],
+                    # Whisper Profanity Detection - мат в речи
+                    AITrigger.TriggerSource.WHISPER_PROFANITY: [
+                        FinalLabel.OK_FALSE, 
+                        FinalLabel.PROFANITY_SPEECH
+                    ],
+                    # Whisper Brand Detection - нативная реклама
+                    AITrigger.TriggerSource.WHISPER_BRAND: [
+                        FinalLabel.OK_FALSE,
+                        FinalLabel.AD_NATIVE,
+                    ],
+                    # NSFW Image Detection - эротика и порнография
+                    AITrigger.TriggerSource.FALCONSAI_NSFW: [
+                        FinalLabel.OK, 
+                        FinalLabel.EROTICA_16,
+                        FinalLabel.PORNOGRAPHY_18
+                    ],
+                    # Violence Detection - драки и жесть
+                    AITrigger.TriggerSource.VIOLENCE_DETECTOR: [
+                        FinalLabel.OK, 
+                        FinalLabel.FIGHT_BLOOD_16,
+                        FinalLabel.VIOLENCE_18
+                    ],
+                    # OCR Text Detection - мат в тексте, реклама, запрещенка
+                    AITrigger.TriggerSource.EASYOCR_TEXT: [
+                        FinalLabel.OK,
+                        FinalLabel.AD_WEBSITE_PHONE,
+                        FinalLabel.PROFANITY_TEXT,
+                        FinalLabel.PROHIBITED_INFO,
+                    ],
                 }
             else:
                 mapping_pairs = {}
@@ -67,12 +101,14 @@ class LabelingService:
         cls._mapping_initialized = True
 
     @classmethod
-    def get_available_labels(cls, trigger_source: Any) -> List[str]:
+    def get_available_labels(cls, trigger_source: Any) -> List[List[str]]:
+        """Возвращает список пар [value, display] для выбранного источника триггера."""
         cls._ensure_mapping()
         name = getattr(trigger_source, 'name', None)
         value = getattr(trigger_source, 'value', None)
         key = name or value or str(trigger_source)
-        return cls.LABEL_MAPPING.get(key, cls.LABEL_MAPPING.get('default', []))
+        result = cls.LABEL_MAPPING.get(key, cls.LABEL_MAPPING.get('default', []))
+        return result
 
     @classmethod
     def create_operator_label(cls, video, operator, ai_trigger=None, final_label=None,
