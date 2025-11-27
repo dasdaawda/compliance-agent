@@ -78,7 +78,9 @@ echo ""
 echo "Checking documentation..."
 check_file "README.md" || ((ERRORS++))
 check_file "DEPLOYMENT.md" || ((ERRORS++))
-check_file "CONFIGURATION.md" || ((ERRORS++))
+check_file "docs/CONFIGURATION.md" || ((ERRORS++))
+check_file "docs/API.md" || ((ERRORS++))
+check_file "docs/ARCHITECTURE.md" || ((ERRORS++))
 check_file "DOCKER_QUICKSTART.md" || ((ERRORS++))
 check_file "DEPLOYMENT_CHECKLIST.md" || ((ERRORS++))
 check_file "HARDENING_SUMMARY.md" || ((ERRORS++))

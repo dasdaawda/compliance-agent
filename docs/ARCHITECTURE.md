@@ -222,7 +222,7 @@ Client Upload --> Django Validation --> Save Video + PipelineExecution -->
 ### Notifications
 - `send_video_ready_notification` dispatches HTML emails to clients once AI + operator review is complete.
 - `notify_pipeline_failure` sends alerts containing video ID, failed stage, and error message to admins and project owners.
-- Email backend configured via environment variables (see [CONFIGURATION.md](../CONFIGURATION.md)).
+- Email backend configured via environment variables (see [CONFIGURATION.md](CONFIGURATION.md)).
 
 ### Logging
 - Structured JSON logging from pipeline tasks includes `video_id`, `step`, `status`, and error details for centralized log ingestion.
@@ -276,10 +276,10 @@ Client Upload --> Django Validation --> Save Video + PipelineExecution -->
 
 ## Operational Guides
 
-- **Configuration Reference:** [CONFIGURATION.md](../CONFIGURATION.md)
+- **Configuration Reference:** [CONFIGURATION.md](CONFIGURATION.md)
 - **Deployment Guide:** [DEPLOYMENT.md](../DEPLOYMENT.md)
 - **API Usage:** [API.md](API.md)
-- **Pipeline Resilience & Storage:** See sections in [CONFIGURATION.md](../CONFIGURATION.md#pipeline-resilience-и-storage-settings)
+- **Pipeline Resilience & Storage:** See sections in [CONFIGURATION.md](CONFIGURATION.md)
 - **Docker Quickstart:** [DOCKER_QUICKSTART.md](../DOCKER_QUICKSTART.md)
 
 For troubleshooting and escalation paths, refer to the respective guides above.

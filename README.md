@@ -36,7 +36,7 @@ nano .env
 - `REPLICATE_API_TOKEN` - токен Replicate API
 - `BACKBLAZE_*` - credentials Backblaze B2
 
-Подробнее: [CONFIGURATION.md](CONFIGURATION.md)
+Подробнее: [docs/CONFIGURATION.md](docs/CONFIGURATION.md)
 
 ### 2. Проверка конфигурации
 
@@ -176,7 +176,10 @@ ai-compliance-agent/
 ├── docker-compose.yml          # Docker Compose для локальной разработки
 ├── requirements.txt            # Python зависимости (pinned versions)
 ├── requirements.dev.txt        # Зависимости для разработки
-├── CONFIGURATION.md            # Руководство по конфигурации
+├── docs/                       # Документация
+│   ├── CONFIGURATION.md        # Руководство по конфигурации
+│   ├── API.md                  # REST API и HTMX документация
+│   └── ARCHITECTURE.md         # Архитектура системы
 ├── DEPLOYMENT.md               # Руководство по деплою
 └── README.md                   # Этот файл
 ```
@@ -187,7 +190,7 @@ ai-compliance-agent/
 
 - **[docs/API.md](docs/API.md)** - Руководство по REST API и HTMX интерфейсам
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Архитектура системы и компоненты
-- **[CONFIGURATION.md](CONFIGURATION.md)** - Подробное руководство по настройке переменных окружения
+- **[docs/CONFIGURATION.md](docs/CONFIGURATION.md)** - Подробное руководство по настройке переменных окружения
 - **[DEPLOYMENT.md](DEPLOYMENT.md)** - Пошаговая инструкция по деплою на DigitalOcean
 
 ### Дополнительные материалы
@@ -219,7 +222,7 @@ ai-compliance-agent/
 4. Создайте API токен
 5. Скопируйте Zone ID и токен в `.env`
 
-Подробнее: [CONFIGURATION.md](CONFIGURATION.md)
+Подробнее: [docs/CONFIGURATION.md](docs/CONFIGURATION.md)
 
 ## 🛠️ Разработка
 
@@ -355,4 +358,4 @@ Proprietary - All rights reserved
 
 **Готово к деплою! 🎉**
 
-Начните с [CONFIGURATION.md](CONFIGURATION.md), затем [DEPLOYMENT.md](DEPLOYMENT.md)
+Начните с [docs/CONFIGURATION.md](docs/CONFIGURATION.md), затем [DEPLOYMENT.md](DEPLOYMENT.md)
