@@ -53,7 +53,7 @@ class VideoUploadView(LoginRequiredMixin, ClientAccessMixin, CreateView):
         form.instance.project = self.project
         response = super().form_valid(form)
         
-        from ai_pipeline.tasks import process_video
+        from ai_pipeline.celery_tasks import process_video
         process_video.delay(str(self.object.id))
         
         messages.success(self.request, 'Видео загружено и отправлено на обработку!')
