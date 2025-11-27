@@ -228,7 +228,7 @@ For production:
 3. Use managed PostgreSQL/Redis services
 4. Use Backblaze B2 (not MinIO)
 5. Enable HTTPS and security settings
-6. See [DEPLOYMENT.md](DEPLOYMENT.md) for full guide
+6. See [docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md) for full guide
 
 ## Clean Up
 
@@ -248,9 +248,9 @@ docker rmi ai-compliance-agent-celery-worker
 
 - Read [README.md](README.md) for full documentation
 - Review [CONFIGURATION.md](CONFIGURATION.md) for settings
-- See [DEPLOYMENT.md](DEPLOYMENT.md) for production deployment
+- See [docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md) for production deployment
 - Check [API_HTMX_DOCUMENTATION.md](API_HTMX_DOCUMENTATION.md) for API usage
 
 ---
 
-**Need help?** Check the [Troubleshooting section in DEPLOYMENT.md](DEPLOYMENT.md#troubleshooting)
+**Need help?** Check the [Troubleshooting section in docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md#troubleshooting)

@@ -488,7 +488,7 @@ b2_utils.delete_artifact('videos/id.mp4')
 
 ## Дополнительная документация
 
-- **Деплой:** См. [DEPLOYMENT.md](DEPLOYMENT.md)
+- **Деплой:** См. [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
 - **Архитектура:** См. [ARCHITECTURE_IMPROVEMENTS.md](ARCHITECTURE_IMPROVEMENTS.md)
 - **Исправления:** См. [CRITICAL_FIXES_EXAMPLES.md](CRITICAL_FIXES_EXAMPLES.md)
 

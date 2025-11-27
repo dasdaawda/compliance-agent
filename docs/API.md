@@ -766,7 +766,7 @@ All HTMX POST/PUT/DELETE requests must include CSRF token:
 ## Additional Resources
 
 - **Configuration Guide:** See [CONFIGURATION.md](../CONFIGURATION.md)
-- **Deployment Guide:** See [DEPLOYMENT.md](../DEPLOYMENT.md)
+- **Deployment Guide:** See [DEPLOYMENT.md](DEPLOYMENT.md)
 - **Architecture Overview:** See [ARCHITECTURE.md](ARCHITECTURE.md)
 - **Interactive API Docs:** `/api/docs/` (Swagger UI)
 - **OpenAPI Schema:** `/api/schema/`
@@ -779,4 +779,4 @@ For issues or questions:
 1. Check Swagger UI at `/api/docs/` for live examples
 2. Review error messages and status codes above
 3. Consult [CONFIGURATION.md](../CONFIGURATION.md) for settings
-4. See [DEPLOYMENT.md](../DEPLOYMENT.md) troubleshooting section
+4. See [DEPLOYMENT.md](DEPLOYMENT.md) troubleshooting section

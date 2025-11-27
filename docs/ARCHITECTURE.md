@@ -253,7 +253,7 @@ Client Upload --> Django Validation --> Save Video + PipelineExecution -->
 **Production Deployment:**
 - Typically deployed to DigitalOcean App Platform or Kubernetes with managed PostgreSQL and Redis.
 - Dockerfile includes multi-stage build, non-root user, and health checks.
-- See [DEPLOYMENT.md](../DEPLOYMENT.md) for detailed instructions, environment variable templates, and troubleshooting.
+- See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions, environment variable templates, and troubleshooting.
 
 ### Network Considerations
 - Web service exposes port 8000 (HTTPS terminated at load balancer/CDN).
@@ -277,7 +277,7 @@ Client Upload --> Django Validation --> Save Video + PipelineExecution -->
 ## Operational Guides
 
 - **Configuration Reference:** [CONFIGURATION.md](../CONFIGURATION.md)
-- **Deployment Guide:** [DEPLOYMENT.md](../DEPLOYMENT.md)
+- **Deployment Guide:** [DEPLOYMENT.md](DEPLOYMENT.md)
 - **API Usage:** [API.md](API.md)
 - **Pipeline Resilience & Storage:** See sections in [CONFIGURATION.md](../CONFIGURATION.md#pipeline-resilience-и-storage-settings)
 - **Docker Quickstart:** [DOCKER_QUICKSTART.md](../DOCKER_QUICKSTART.md)
