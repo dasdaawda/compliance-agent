@@ -92,6 +92,7 @@ class VerificationWorkspaceView(LoginRequiredMixin, OperatorRequiredMixin, Templ
             'video': task.video,
             'ai_triggers': task.video.ai_triggers.filter(status=AITrigger.Status.PENDING).order_by('timestamp_sec'),
             'operator_labels': task.video.operator_labels.all().order_by('start_time_sec'),
+            'final_label_choices': OperatorLabel.FinalLabel.choices,
         })
         return context
 
@@ -342,3 +343,48 @@ class HeartbeatView(LoginRequiredMixin, OperatorRequiredMixin, View):
                 'success': False,
                 'message': f'Ошибка при обновлении активности: {str(e)}'
             })
+
+@method_decorator(require_http_methods(["POST"]), name='dispatch')
+class AddManualLabelView(LoginRequiredMixin, OperatorRequiredMixin, View):
+    """Добавление риска вручную оператором (US-O9)."""
+    def post(self, request, task_id):
+        try:
+            data = json.loads(request.body)
+            start_time_sec = data.get('start_time_sec')
+            final_label = data.get('final_label')
+            comment = data.get('comment', '')
+            
+            if start_time_sec is None or final_label is None:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Требуются поля: start_time_sec и final_label'
+                })
+            
+            with transaction.atomic():
+                task = get_object_or_404(
+                    VerificationTask, 
+                    id=task_id, 
+                    operator=request.user,
+                    status=VerificationTask.Status.IN_PROGRESS
+                )
+                
+                if task.is_stale():
+                    return HttpResponseForbidden("Task lock expired")
+                
+                LabelingService.create_operator_label(
+                    video=task.video,
+                    operator=request.user,
+                    ai_trigger=None,
+                    final_label=final_label,
+                    comment=comment,
+                    start_time_sec=start_time_sec
+                )
+                
+                task.heartbeat()
+            
+            return JsonResponse({'success': True})
+            
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Неверный формат JSON'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Ошибка: {str(e)}'})

@@ -7,6 +7,7 @@ urlpatterns = [
     path('dashboard/', views.OperatorDashboardView.as_view(), name='dashboard'),
     path('workspace/<uuid:task_id>/', views.VerificationWorkspaceView.as_view(), name='verification_workspace'),
     path('workspace/<uuid:task_id>/heartbeat/', views.HeartbeatView.as_view(), name='heartbeat'),
+    path('workspace/<uuid:task_id>/manual-label/', views.AddManualLabelView.as_view(), name='add_manual_label'),
     path('take-task/', views.TakeTaskView.as_view(), name='take_task'),
     path('resume-task/<uuid:task_id>/', views.ResumeTaskView.as_view(), name='resume_task'),
     path('release-task/<uuid:task_id>/', views.ReleaseTaskView.as_view(), name='release_task'),

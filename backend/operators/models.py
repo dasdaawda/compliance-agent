@@ -60,12 +60,35 @@ class OperatorActionLog(models.Model):
 
 class OperatorLabel(models.Model):
     class FinalLabel(models.TextChoices):
+        # General
         OK = "ok", _("OK")
         OK_FALSE = "ok_false", _("OK (ложное срабатывание)")
+        
+        # Advertising / Реклама
         AD_BRAND = "reklama_brand", _("Реклама (бренд)")
-        PROFANITY_SPEECH = "mat_speech", _("Мат (речь)")
+        AD_WEBSITE_PHONE = "reklama_site_phone", _("Реклама (сайт/телефон)")
+        AD_NATIVE = "reklama_native", _("Рекламная интеграция (нативная)")
+        
+        # Alcohol & Tobacco / Алкоголь и табак
+        ALCOHOL_VISIBLE = "alcohol_visible", _("Алкоголь (в кадре)")
+        TOBACCO_VAPE = "tobacco_vape", _("Табак/Вейп (в кадре)")
+        
+        # Profanity / Нецензурная лексика
+        PROFANITY_SPEECH = "mat_speech", _("Мат (в речи)")
+        PROFANITY_TEXT = "mat_text", _("Мат (в тексте)")
+        
+        # NSFW Content
+        EROTICA_16 = "erotica_16", _("Эротика (16+)")
         PORNOGRAPHY_18 = "nsfw_18", _("Порнография (18+)")
-        VIOLENCE_18 = "violence_18", _("Насилие (18+)")
+        
+        # Violence / Насилие
+        FIGHT_BLOOD_16 = "fight_blood_16", _("Драка/Кровь (16+)")
+        VIOLENCE_18 = "violence_18", _("Насилие/Жесть (18+)")
+        
+        # Prohibited Content / Запрещенная информация
+        PROHIBITED_INFO = "prohibited_info", _("Запрещ. информация (призыв)")
+        PROHIBITED_SYMBOLS = "prohibited_symbols", _("Запрещ. символика")
+        TATTOO_GENERAL = "tattoo_general", _("Тату (общее)")
     
     class Status(models.TextChoices):
         DRAFT = 'draft', _('Черновик')
