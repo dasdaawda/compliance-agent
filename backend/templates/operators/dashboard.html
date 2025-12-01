@@ -42,7 +42,9 @@
                                 <button 
                                     class="btn btn-warning"
                                     hx-post="{% url 'operators:resume_task' current_task.id %}"
-                                    hx-target="#main-content">
+                                    hx-target="#main-content"
+                                    hx-indicator="#resume-task-spinner">
+                                    <span id="resume-task-spinner" class="htmx-indicator spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                                     Возобновить задачу
                                 </button>
                             {% else %}
@@ -55,7 +57,9 @@
                                 class="btn btn-outline-danger ms-2"
                                 hx-post="{% url 'operators:release_task' current_task.id %}"
                                 hx-confirm="Вы уверены, что хотите освободить задачу?"
-                                hx-target="#main-content">
+                                hx-target="#main-content"
+                                hx-indicator="#release-task-spinner">
+                                <span id="release-task-spinner" class="htmx-indicator spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                                 Освободить задачу
                             </button>
                         </div>
@@ -66,7 +70,9 @@
                     <button 
                         class="btn btn-success btn-lg"
                         hx-post="{% url 'operators:take_task' %}"
-                        hx-target="#main-content">
+                        hx-target="#main-content"
+                        hx-indicator="#take-task-spinner">
+                        <span id="take-task-spinner" class="htmx-indicator spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                         Взять задачу
                     </button>
                 {% endif %}
@@ -105,7 +111,9 @@
                                 <button 
                                     class="btn btn-sm btn-warning ms-2"
                                     hx-post="{% url 'operators:resume_task' task.id %}"
-                                    hx-target="#main-content">
+                                    hx-target="#main-content"
+                                    hx-indicator="#stale-resume-spinner-{{ task.id }}">
+                                    <span id="stale-resume-spinner-{{ task.id }}" class="htmx-indicator spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
                                     Возобновить
                                 </button>
                             </div>

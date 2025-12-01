@@ -148,13 +148,31 @@ class OperatorWorkspace {
             if (data.success) {
                 this.onTriggerProcessed(triggerId);
             } else {
-                alert('Ошибка: ' + data.message);
+                this.showError('Ошибка: ' + data.message);
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Произошла ошибка при отправке решения');
+            this.showError('Произошла ошибка при отправке решения');
         });
+    }
+    
+    showError(message) {
+        // Remove existing error alerts
+        document.querySelectorAll('.alert-danger').forEach(alert => alert.remove());
+        
+        const errorHtml = `
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        
+        // Insert at the top of the main content area
+        const mainContent = document.querySelector('.container-fluid');
+        if (mainContent) {
+            mainContent.insertAdjacentHTML('afterbegin', errorHtml);
+        }
     }
     
     onTriggerProcessed(triggerId) {
@@ -248,6 +266,33 @@ function syncToTrigger(timestamp) {
     if (window.workspace) {
         window.workspace.syncToTrigger(timestamp);
     }
+}
+
+function completeVerification() {
+    const decisionSummary = document.getElementById('decision_summary').value;
+    
+    fetch(`/operators/workspace/${window.workspace.getTaskId()}/complete/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': window.workspace.getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            decision_summary: decisionSummary
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = data.redirect_url;
+        } else {
+            window.workspace.showError('Ошибка: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        window.workspace.showError('Произошла ошибка при завершении верификации');
+    });
 }
 
 function clearDecisionPanel() {

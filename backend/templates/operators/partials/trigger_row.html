@@ -1,30 +1,37 @@
-<div class="trigger-row p-2 mb-2 border rounded" 
+<div class="trigger-row p-3 p-md-2 mb-2 border rounded" 
      data-trigger-id="{{ ai_trigger.id }}"
      onclick="selectTrigger('{{ ai_trigger.id }}', '{{ ai_trigger.timestamp_sec }}')"
-     style="cursor: pointer;">
-    <div class="d-flex justify-content-between align-items-center">
-        <div class="flex-grow-1">
-            <div class="d-flex align-items-center">
-                <span class="badge bg-secondary me-2">{{ ai_trigger.get_trigger_source_display }}</span>
-                <strong>{{ ai_trigger.timestamp_sec }}s</strong>
+     role="button"
+     tabindex="0"
+     aria-label="Выберите триггер от {{ ai_trigger.timestamp_sec }}с">
+    <div class="d-flex justify-content-between align-items-start">
+        <div class="flex-grow-1 min-w-0">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="badge bg-secondary">{{ ai_trigger.get_trigger_source_display }}</span>
+                <strong class="text-truncate">{{ ai_trigger.timestamp_sec }}s</strong>
                 {% if ai_trigger.confidence %}
-                    <small class="text-muted ms-2">{{ ai_trigger.confidence }}%</small>
+                    <small class="text-muted">{{ ai_trigger.confidence }}%</small>
                 {% endif %}
             </div>
             {% if ai_trigger.data %}
-                <small class="text-muted d-block mt-1">
-                    {% if ai_trigger.data.text %}
-                        "{{ ai_trigger.data.text|truncatechars:50 }}"
-                    {% elif ai_trigger.data.objects %}
-                        {{ ai_trigger.data.objects|length }} объектов
-                    {% else %}
-                        {{ ai_trigger.data|truncatechars:50 }}
-                    {% endif %}
-                </small>
+                <div class="mt-2">
+                    <small class="text-muted d-block">
+                        {% if ai_trigger.data.text %}
+                            "{{ ai_trigger.data.text|truncatechars:50 }}"
+                        {% elif ai_trigger.data.objects %}
+                            {{ ai_trigger.data.objects|length }} объектов
+                        {% else %}
+                            {{ ai_trigger.data|truncatechars:50 }}
+                        {% endif %}
+                    </small>
+                </div>
             {% endif %}
         </div>
-        <div class="text-end">
-            <small class="text-muted">{{ ai_trigger.created_at|date:"H:i" }}</small>
+        <div class="text-end ms-2 flex-shrink-0">
+            <small class="text-muted d-none d-md-block">{{ ai_trigger.created_at|date:"H:i" }}</small>
+            <div class="d-md-none">
+                <i class="bi bi-chevron-right text-muted"></i>
+            </div>
         </div>
     </div>
 </div>
