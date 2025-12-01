@@ -5,6 +5,7 @@ from django.urls import reverse_lazy
 from django.views.generic import ListView, CreateView, DetailView, View
 from django.http import HttpResponse
 from django.template.loader import render_to_string
+from django.contrib.messages import get_messages
 
 from users.views import ClientAccessMixin
 from projects.models import Project, Video, VideoStatus
@@ -79,7 +80,7 @@ class ProjectCreatePartialView(LoginRequiredMixin, ClientAccessMixin, CreateView
                 request=self.request
             )
             response = HttpResponse(html)
-            response['HX-Trigger'] = 'projectCreated'
+            response['HX-Trigger'] = '{"projectCreated": true, "messagesUpdated": true}'
             return response
         
         messages.success(self.request, 'Проект успешно создан!')
@@ -133,7 +134,7 @@ class VideoUploadPartialView(LoginRequiredMixin, ClientAccessMixin, CreateView):
                 request=self.request
             )
             response = HttpResponse(html)
-            response['HX-Trigger'] = 'videoUploaded'
+            response['HX-Trigger'] = '{"videosUpdated": {"projectId": "' + str(self.project.id) + '"}, "messagesUpdated": true}'
             return response
         
         messages.success(self.request, 'Видео загружено и отправлено на обработку!')
@@ -194,7 +195,28 @@ class VideoSignedUrlView(LoginRequiredMixin, ClientAccessMixin, View):
             b2_path = video.video_url.split('/')[-1] if '/' in video.video_url else video.video_url
             signed_url = b2_utils.generate_signed_url(b2_path, expiration=3600)
             
-            html = f'<video controls class="w-100"><source src="{signed_url}" type="video/mp4"></video>'
+            # Show the video player row and inject the video element
+            html = f'''
+            <script>
+                document.getElementById('video-player-{video.id}').classList.remove('d-none');
+            </script>
+            <video controls class="w-100" style="max-height: 400px;">
+                <source src="{signed_url}" type="video/mp4">
+                Ваш браузер не поддерживает воспроизведение видео.
+            </video>
+            '''
             return HttpResponse(html)
         except Exception as e:
             return HttpResponse(f'<p class="text-danger">Ошибка при получении URL: {str(e)}</p>')
+
+
+class MessagesPartialView(LoginRequiredMixin, ClientAccessMixin, View):
+    """HTMX partial view for messages."""
+    
+    def get(self, request):
+        html = render_to_string(
+            'partials/messages.html',
+            {'messages': get_messages(request)},
+            request=request
+        )
+        return HttpResponse(html)

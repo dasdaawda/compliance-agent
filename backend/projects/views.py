@@ -8,7 +8,7 @@ from django.urls import reverse_lazy
 from django.views.generic import ListView, CreateView, DetailView
 
 from users.views import ClientAccessMixin
-from .models import Project, Video
+from .models import Project, Video, VideoStatus
 from .forms import ProjectForm, VideoUploadForm, VideoURLForm
 
 class ProjectListView(LoginRequiredMixin, ClientAccessMixin, ListView):
@@ -35,6 +35,30 @@ class ProjectDetailView(LoginRequiredMixin, ClientAccessMixin, DetailView):
     
     def get_queryset(self):
         return Project.objects.filter(owner=self.request.user)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        project = context['project']
+        
+        total_videos = project.videos.count()
+        processing_videos = project.videos.filter(
+            status__in=[VideoStatus.UPLOADED, VideoStatus.PROCESSING]
+        ).count()
+        completed_videos = project.videos.filter(
+            status=VideoStatus.COMPLETED
+        ).count()
+        failed_videos = project.videos.filter(
+            status=VideoStatus.FAILED
+        ).count()
+        
+        context.update({
+            'total_videos': total_videos,
+            'processing_videos': processing_videos,
+            'completed_videos': completed_videos,
+            'failed_videos': failed_videos,
+        })
+        
+        return context
 
 class VideoUploadView(LoginRequiredMixin, ClientAccessMixin, CreateView):
     model = Video
@@ -44,6 +68,11 @@ class VideoUploadView(LoginRequiredMixin, ClientAccessMixin, CreateView):
     def dispatch(self, request, *args, **kwargs):
         self.project = get_object_or_404(Project, id=kwargs['project_id'], owner=request.user)
         return super().dispatch(request, *args, **kwargs)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['project'] = self.project
+        return context
     
     def form_valid(self, form):
         if not self.request.user.has_sufficient_balance(0):

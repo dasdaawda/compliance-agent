@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}{{ video.original_name }} - AI Compliance Agent{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1>{{ video.original_name }}</h1>
+                <p class="text-muted">Проект: {{ video.project.name }}</p>
+            </div>
+            <a href="{% url 'projects:project_detail' video.project.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Вернуться к проекту
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Информация о видео</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr>
+                        <td><strong>Статус:</strong></td>
+                        <td>
+                            {% if video.status == 'UPLOADED' %}
+                                <span class="badge bg-secondary">{{ video.get_status_display }}</span>
+                            {% elif video.status == 'PROCESSING' %}
+                                <span class="badge bg-warning">{{ video.get_status_display }}</span>
+                            {% elif video.status == 'VERIFICATION' %}
+                                <span class="badge bg-info">{{ video.get_status_display }}</span>
+                            {% elif video.status == 'COMPLETED' %}
+                                <span class="badge bg-success">{{ video.get_status_display }}</span>
+                            {% elif video.status == 'FAILED' %}
+                                <span class="badge bg-danger">{{ video.get_status_display }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Длительность:</strong></td>
+                        <td>
+                            {% if video.duration %}
+                                {{ video.duration|floatformat:0 }} сек
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Размер файла:</strong></td>
+                        <td>
+                            {% if video.file_size %}
+                                {{ video.file_size|filesizeformat }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Дата загрузки:</strong></td>
+                        <td>{{ video.created_at|date:"d.m.Y H:i" }}</td>
+                    </tr>
+                </table>
+                
+                {% if video.video_url %}
+                <div class="mt-4">
+                    <h6>Просмотр видео</h6>
+                    <div id="video-player-{{ video.id }}">
+                        <button class="btn btn-success"
+                                hx-get="{% url 'projects:video_signed_url' video.id %}"
+                                hx-target="#video-player-{{ video.id }}"
+                                hx-swap="innerHTML">
+                            <i class="bi bi-play-circle"></i> Загрузить плеер
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Действия</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary"
+                            hx-get="{% url 'projects:report_detail_partial' video.id %}"
+                            hx-target="#report-modal-content"
+                            hx-swap="innerHTML"
+                            data-bs-toggle="modal"
+                            data-bs-target="#reportModal">
+                        <i class="bi bi-file-text"></i> Просмотреть отчет
+                    </button>
+                    
+                    {% if video.video_url %}
+                    <button class="btn btn-outline-success"
+                            hx-get="{% url 'projects:video_signed_url' video.id %}"
+                            hx-target="#video-player-inline"
+                            hx-swap="innerHTML">
+                        <i class="bi bi-play-circle"></i> Воспроизвести
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        {% if video.status == 'COMPLETED' and video.ai_report %}
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">Статистика отчета</h6>
+            </div>
+            <div class="card-body">
+                {% if video.ai_report.risks %}
+                    <p class="mb-1"><strong>Обнаружено рисков:</strong> {{ video.ai_report.risks|length }}</p>
+                {% else %}
+                    <p class="mb-1 text-success"><i class="bi bi-check-circle"></i> Риски не обнаружены</p>
+                {% endif %}
+                {% if video.ai_report.summary %}
+                    <p class="mb-0"><small class="text-muted">{{ video.ai_report.summary|truncatewords:10 }}</small></p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row mt-3">
+    <div class="col-12">
+        <div id="video-player-inline">
+            <!-- Video player will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<!-- Report Modal -->
+<div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" id="report-modal-content">
+            <!-- Content will be loaded here via HTMX -->
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -19,4 +19,5 @@ urlpatterns = [
     path('htmx/projects/<uuid:project_id>/upload/', login_required(views_htmx.VideoUploadPartialView.as_view()), name='video_upload_partial'),
     path('htmx/videos/<uuid:video_id>/report/', login_required(views_htmx.ReportDetailPartialView.as_view()), name='report_detail_partial'),
     path('htmx/videos/<uuid:video_id>/signed-url/', login_required(views_htmx.VideoSignedUrlView.as_view()), name='video_signed_url'),
+    path('htmx/messages/', login_required(views_htmx.MessagesPartialView.as_view()), name='messages_partial'),
 ]

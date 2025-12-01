@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Проекты - AI Compliance Agent{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Мои проекты</h1>
+            <button class="btn btn-primary" 
+                    hx-get="{% url 'projects:project_create_partial' %}" 
+                    hx-target="#modal-content"
+                    hx-swap="innerHTML"
+                    data-bs-toggle="modal"
+                    data-bs-target="#actionModal">
+                <i class="bi bi-plus-circle"></i> Создать проект
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body" 
+                 id="projects-list"
+                 hx-get="{% url 'projects:project_list_partial' %}" 
+                 hx-trigger="load, projectCreated from:body"
+                 hx-swap="innerHTML">
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for actions -->
+<div class="modal fade" id="actionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" id="modal-content">
+            <!-- Content will be loaded here via HTMX -->
+        </div>
+    </div>
+</div>
+{% endblock %}

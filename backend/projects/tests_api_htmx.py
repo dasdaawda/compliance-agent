@@ -5,6 +5,8 @@ from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.contrib.messages import get_messages
+from django.contrib.messages.storage.fallback import FallbackStorage
 
 from users.models import User, UserRole
 from projects.models import Project, Video, VideoStatus
@@ -394,3 +396,189 @@ class SignedURLTests(APITestCase):
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('signed_url', response.data)
+
+
+class HTMXTemplateTests(TestCase):
+    """Test HTMX views and templates."""
+    
+    def setUp(self):
+        self.client_user = User.objects.create_user(
+            username='client@test.com',
+            email='client@test.com',
+            password='testpass123',
+            role=UserRole.CLIENT
+        )
+        self.client.login(username='client@test.com', password='testpass123')
+        
+        # Set up message storage
+        self.session = self.client.session
+        self.messages = FallbackStorage(self.session)
+        
+        self.project = Project.objects.create(
+            name='Test Project',
+            description='Test Description',
+            owner=self.client_user
+        )
+        
+        self.video = Video.objects.create(
+            project=self.project,
+            original_name='test_video.mp4',
+            status=VideoStatus.COMPLETED,
+            video_url='https://cdn.example.com/test_video.mp4',
+            file_size=1024000,
+            duration=120
+        )
+    
+    def test_project_list_template_renders(self):
+        """Test that project list template renders with base.html."""
+        url = reverse('projects:project_list')
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'AI Compliance Agent')
+        self.assertContains(response, 'Мои проекты')
+        self.assertContains(response, 'bootstrap')
+        self.assertContains(response, 'htmx.org')
+    
+    def test_project_detail_template_renders(self):
+        """Test that project detail template renders with stats."""
+        url = reverse('projects:project_detail', args=[self.project.id])
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.project.name)
+        self.assertContains(response, 'Всего видео')
+        self.assertContains(response, 'Завершено')
+        self.assertContains(response, 'Загрузить видео')
+    
+    def test_video_detail_template_renders(self):
+        """Test that video detail template renders with status badge."""
+        url = reverse('projects:video_detail', args=[self.video.id])
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.video.original_name)
+        self.assertContains(response, 'Готово')  # VideoStatus.COMPLETED display
+        self.assertContains(response, 'Просмотреть отчет')
+    
+    def test_video_upload_template_renders(self):
+        """Test that video upload template renders."""
+        url = reverse('projects:video_upload', args=[self.project.id])
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Загрузить видео')
+        self.assertContains(response, self.project.name)
+        self.assertContains(response, 'Форма загрузки видео')
+    
+    def test_htmx_project_list_partial(self):
+        """Test HTMX partial for project list."""
+        url = reverse('projects:project_list_partial')
+        response = self.client.get(url, HTTP_HX_REQUEST='true')
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.project.name)
+    
+    def test_htmx_video_list_partial(self):
+        """Test HTMX partial for video list."""
+        url = reverse('projects:video_list_partial', args=[self.project.id])
+        response = self.client.get(url, HTTP_HX_REQUEST='true')
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.video.original_name)
+        self.assertContains(response, 'badge bg-success')  # Status badge
+    
+    def test_htmx_video_upload_partial_success(self):
+        """Test HTMX partial video upload with success triggers."""
+        video_file = SimpleUploadedFile(
+            "test_video.mp4", 
+            b"fake video content", 
+            content_type="video/mp4"
+        )
+        
+        url = reverse('projects:video_upload_partial', args=[self.project.id])
+        response = self.client.post(
+            url,
+            {'original_name': 'Test Upload', 'video_file': video_file},
+            HTTP_HX_REQUEST='true'
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('HX-Trigger', response)
+        trigger_data = json.loads(response['HX-Trigger'])
+        self.assertIn('videosUpdated', trigger_data)
+        self.assertIn('messagesUpdated', trigger_data)
+        self.assertEqual(trigger_data['videosUpdated']['projectId'], str(self.project.id))
+    
+    def test_htmx_video_upload_partial_validation_error(self):
+        """Test HTMX partial video upload with validation errors."""
+        url = reverse('projects:video_upload_partial', args=[self.project.id])
+        response = self.client.post(
+            url,
+            {'original_name': 'Test Upload'},  # Missing video_file
+            HTTP_HX_REQUEST='true'
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'video_file')
+        self.assertNotIn('HX-Trigger', response)
+    
+    def test_htmx_project_create_partial_success(self):
+        """Test HTMX partial project creation with success triggers."""
+        url = reverse('projects:project_create_partial')
+        response = self.client.post(
+            url,
+            {'name': 'New Project', 'description': 'New Description'},
+            HTTP_HX_REQUEST='true'
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('HX-Trigger', response)
+        trigger_data = json.loads(response['HX-Trigger'])
+        self.assertIn('projectCreated', trigger_data)
+        self.assertIn('messagesUpdated', trigger_data)
+    
+    def test_htmx_messages_partial(self):
+        """Test HTMX messages partial."""
+        # Add a message to the session
+        self.session['_messages'] = []
+        self.messages.add('Test message', 'success')
+        self.session.save()
+        
+        url = reverse('projects:messages_partial')
+        response = self.client.get(url, HTTP_HX_REQUEST='true')
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Test message')
+        self.assertContains(response, 'alert-success')
+    
+    def test_responsive_video_list_partial(self):
+        """Test that video list partial has responsive design."""
+        url = reverse('projects:video_list_partial', args=[self.project.id])
+        response = self.client.get(url, HTTP_HX_REQUEST='true')
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'd-none d-md-table-cell')  # Responsive columns
+        self.assertContains(response, 'd-none d-lg-table-cell')  # More responsive columns
+        self.assertContains(response, 'btn-group')  # Action buttons group
+        self.assertContains(response, 'video-player-' + str(self.video.id))  # Video player row
+    
+    def test_video_status_badges_use_choices(self):
+        """Test that video status badges use VideoStatus choices."""
+        # Create videos with different statuses
+        for status in [VideoStatus.UPLOADED, VideoStatus.PROCESSING, VideoStatus.VERIFICATION, VideoStatus.FAILED]:
+            Video.objects.create(
+                project=self.project,
+                original_name=f'video_{status}.mp4',
+                status=status
+            )
+        
+        url = reverse('projects:video_list_partial', args=[self.project.id])
+        response = self.client.get(url, HTTP_HX_REQUEST='true')
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'badge bg-secondary')  # UPLOADED
+        self.assertContains(response, 'badge bg-warning')    # PROCESSING
+        self.assertContains(response, 'badge bg-info')       # VERIFICATION
+        self.assertContains(response, 'badge bg-success')    # COMPLETED
+        self.assertContains(response, 'badge bg-danger')     # FAILED

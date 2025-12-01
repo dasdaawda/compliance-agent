@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Загрузить видео - {{ project.name }} - AI Compliance Agent{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1>Загрузить видео</h1>
+                <p class="text-muted">Проект: {{ project.name }}</p>
+            </div>
+            <a href="{% url 'projects:project_detail' project.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Вернуться к проекту
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Форма загрузки видео</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.original_name.id_for_label }}" class="form-label">Название видео</label>
+                        {{ form.original_name }}
+                        {% if form.original_name.errors %}
+                            <div class="text-danger small">{{ form.original_name.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.video_file.id_for_label }}" class="form-label">Файл видео</label>
+                        {{ form.video_file }}
+                        {% if form.video_file.errors %}
+                            <div class="text-danger small">{{ form.video_file.errors }}</div>
+                        {% endif %}
+                        <div class="form-text">
+                            Допустимые форматы: MP4, AVI, MOV, MKV, WEBM. Максимальный размер: 2 ГБ.
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'projects:project_detail' project.id %}" class="btn btn-secondary">
+                            Отмена
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-upload"></i> Загрузить
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
