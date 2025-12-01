@@ -8,12 +8,139 @@ from django.urls import reverse
 from unittest.mock import patch, MagicMock
 from rest_framework.test import APIClient
 
-from users.models import UserRole
+from users.models import UserRole, User
 from projects.models import Video, VideoStatus
 from ai_pipeline.models import AITrigger, VerificationTask, RiskDefinition
 from operators.models import OperatorLabel, OperatorActionLog
 from operators.services import LabelingService, TaskQueueService
 from operators.tasks import release_stale_tasks, check_idle_tasks_sla
+
+
+class OperatorTemplateTest(TestCase):
+    """Тесты шаблонов операторского интерфейса"""
+    
+    def setUp(self):
+        self.operator_user = User.objects.create_user(
+            username='operator1',
+            email='operator1@test.com',
+            password='testpass123',
+            role=UserRole.OPERATOR
+        )
+        
+        # Create a project first
+        from projects.models import Project
+        project = Project.objects.create(
+            name='Test Project',
+            owner=self.operator_user
+        )
+        
+        self.video = Video.objects.create(
+            original_name='test_video.mp4',
+            status=VideoStatus.COMPLETED,
+            project=project,
+            video_file=None,
+            video_url=None
+        )
+        
+        self.task = VerificationTask.objects.create(
+            video=self.video,
+            status=VerificationTask.Status.PENDING
+        )
+        
+        self.trigger = AITrigger.objects.create(
+            video=self.video,
+            trigger_source=AITrigger.TriggerSource.VISION,
+            timestamp_sec=10.5,
+            confidence=85.0,
+            data={'objects': ['person', 'car']}
+        )
+    
+    def test_dashboard_template_renders(self):
+        """Тест отображения шаблона дашборда"""
+        self.client.force_login(self.operator_user)
+        response = self.client.get(reverse('operators:dashboard'))
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Панель оператора')
+        self.assertContains(response, 'htmx-indicator')  # Проверка наличия индикаторов
+        self.assertContains(response, 'Взять задачу')
+    
+    def test_workspace_template_renders_with_static_js(self):
+        """Тест отображения шаблона рабочего пространства с загрузкой JS"""
+        self.task.assign_to_operator(self.operator_user)
+        
+        self.client.force_login(self.operator_user)
+        response = self.client.get(reverse('operators:verification_workspace', args=[self.task.id]))
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Рабочее пространство')
+        self.assertContains(response, 'js/operators/workspace.js')  # Проверка загрузки статического JS
+        self.assertContains(response, 'data-trigger-id')  # Проверка атрибутов для триггеров
+        self.assertContains(response, 'aria-label')  # Проверка доступности
+    
+    def test_trigger_row_partial_renders_with_context(self):
+        """Тест отображения partial для строки триггера с правильным контекстом"""
+        self.task.assign_to_operator(self.operator_user)
+        
+        self.client.force_login(self.operator_user)
+        response = self.client.get(reverse('operators:verification_workspace', args=[self.task.id]))
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '10.5s')  # Временная метка триггера
+        self.assertContains(response, 'VISION')  # Источник триггера
+        self.assertContains(response, '85.0%')  # Уверенность
+        self.assertContains(response, 'объектов')  # Данные триггера
+        self.assertContains(response, 'role="button"')  # Доступность
+        self.assertContains(response, 'tabindex="0"')  # Навигация с клавиатуры
+    
+    def test_task_expired_template_extends_base(self):
+        """Тест шаблона истекшей задачи наследует base.html"""
+        expired_task = VerificationTask.objects.create(
+            video=self.video,
+            status=VerificationTask.Status.PENDING,
+            expires_at=timezone.now() - timezone.timedelta(hours=1)
+        )
+        
+        self.client.force_login(self.operator_user)
+        response = self.client.get(reverse('operators:task_expired', args=[expired_task.id]))
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Оператор верификации')  # Из base.html
+        self.assertContains(response, 'Время задачи истекло')
+        self.assertContains(response, 'navbar')  # Навигационная панель из base.html
+    
+    def test_task_not_available_template_extends_base(self):
+        """Тест шаблона недоступной задачи наследует base.html"""
+        self.client.force_login(self.operator_user)
+        response = self.client.get(reverse('operators:task_not_available'))
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Оператор верификации')  # Из base.html
+        self.assertContains(response, 'Задача недоступна')
+        self.assertContains(response, 'navbar')  # Навигационная панель из base.html
+    
+    def test_responsive_css_classes_present(self):
+        """Тест наличия CSS классов для адаптивности"""
+        self.task.assign_to_operator(self.operator_user)
+        
+        self.client.force_login(self.operator_user)
+        response = self.client.get(reverse('operators:verification_workspace', args=[self.task.id]))
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'p-3 p-md-2')  # Адаптивные отступы
+        self.assertContains(response, 'd-md-none')  # Скрытие на мобильных
+        self.assertContains(response, 'flex-wrap')  # Перенос на мобильных
+        self.assertContains(response, '@media (max-width: 768px)')  # Media запросы
+    
+    def test_htmx_indicators_present(self):
+        """Тест наличия HTMX индикаторов"""
+        self.client.force_login(self.operator_user)
+        response = self.client.get(reverse('operators:dashboard'))
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'hx-indicator')  # Атрибуты индикаторов
+        self.assertContains(response, 'htmx-indicator')  # CSS классы индикаторов
+        self.assertContains(response, 'spinner-border')  # Bootstrap спиннеры
 
 
 class OperatorTaskLifecycleTest(TransactionTestCase):
