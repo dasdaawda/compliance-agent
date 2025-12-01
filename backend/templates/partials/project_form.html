@@ -3,7 +3,7 @@
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <form hx-post="{% url 'projects:project_create_partial' %}" 
-      hx-target="#projects-list"
+      hx-target="#modal-content"
       hx-swap="innerHTML">
     {% csrf_token %}
     <div class="modal-body">

@@ -87,6 +87,63 @@
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     
+    <script>
+        // Handle HTMX events for dynamic content updates
+        document.body.addEventListener('htmx:afterSwap', function(event) {
+            // Handle modal content loading
+            if (event.detail.target.id === 'modal-content') {
+                const modal = document.getElementById('actionModal');
+                if (modal) {
+                    const bsModal = new bootstrap.Modal(modal);
+                    bsModal.show();
+                }
+            }
+            
+            // Handle report modal content loading
+            if (event.detail.target.id === 'report-modal-content') {
+                const modal = document.getElementById('reportModal');
+                if (modal) {
+                    const bsModal = new bootstrap.Modal(modal);
+                    bsModal.show();
+                }
+            }
+        });
+
+        // Handle custom HTMX triggers
+        document.body.addEventListener('videosUpdated', function(event) {
+            const detail = event.detail;
+            if (detail && detail.projectId) {
+                // Refresh the video list for the specific project
+                const videoListContainer = document.getElementById(`videos-list-${detail.projectId}`);
+                if (videoListContainer) {
+                    htmx.ajax('GET', `/projects/htmx/projects/${detail.projectId}/videos/`, {target: videoListContainer});
+                }
+            }
+            
+            // Hide the upload modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('actionModal'));
+            if (modal) {
+                modal.hide();
+            }
+        });
+
+        document.body.addEventListener('messagesUpdated', function() {
+            // Refresh the messages container
+            const messagesContainer = document.getElementById('messages-container');
+            if (messagesContainer) {
+                htmx.ajax('GET', '/projects/htmx/messages/', {target: messagesContainer, swap: 'innerHTML'});
+            }
+        });
+
+        document.body.addEventListener('projectCreated', function() {
+            // Hide the modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('actionModal'));
+            if (modal) {
+                modal.hide();
+            }
+        });
+    </script>
+    
     {% block extra_js %}{% endblock %}
 </body>
 </html>

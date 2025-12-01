@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} - AI Compliance Agent{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1>{{ project.name }}</h1>
+                {% if project.description %}
+                    <p class="text-muted">{{ project.description }}</p>
+                {% endif %}
+            </div>
+            <button class="btn btn-primary" 
+                    hx-get="{% url 'projects:video_upload_partial' project.id %}"
+                    hx-target="#modal-content"
+                    hx-swap="innerHTML"
+                    data-bs-toggle="modal"
+                    data-bs-target="#actionModal">
+                <i class="bi bi-upload"></i> Загрузить видео
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-film"></i> Всего видео
+                </h5>
+                <h2>{{ total_videos }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-hourglass-split"></i> В обработке
+                </h5>
+                <h2>{{ processing_videos }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-check-circle"></i> Завершено
+                </h5>
+                <h2>{{ completed_videos }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-exclamation-triangle"></i> Ошибки
+                </h5>
+                <h2>{{ failed_videos }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Видео в проекте</h5>
+            </div>
+            <div class="card-body" 
+                 id="videos-list-{{ project.id }}"
+                 hx-get="{% url 'projects:video_list_partial' project.id %}" 
+                 hx-trigger="load, videoUpdated from:body, videoUploaded from:body"
+                 hx-swap="innerHTML">
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for actions -->
+<div class="modal fade" id="actionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" id="modal-content">
+            <!-- Content will be loaded here via HTMX -->
+        </div>
+    </div>
+</div>
+
+<!-- Report Modal -->
+<div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" id="report-modal-content">
+            <!-- Content will be loaded here via HTMX -->
+        </div>
+    </div>
+</div>
+{% endblock %}
